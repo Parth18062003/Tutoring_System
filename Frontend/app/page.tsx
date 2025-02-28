@@ -19,7 +19,7 @@ export default function Home() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">BrainBoost</span>
+            <span className="text-xl font-bold">BrainWave</span>
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm font-medium hover:underline underline-offset-4">Features</a>
@@ -83,7 +83,7 @@ export default function Home() {
                 <div className="relative overflow-hidden rounded-lg border bg-background shadow-xl">
                   <Image
                     src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?q=80&w=1170&auto=format&fit=crop"
-                    alt="Student using BrainBoost AI tutoring platform"
+                    alt="Student using BrainWave AI tutoring platform"
                     width={600}
                     height={400}
                     className="object-cover w-full aspect-video"
@@ -265,7 +265,7 @@ export default function Home() {
                 <div className="relative overflow-hidden rounded-lg border bg-background shadow-xl">
                   <Image
                     src="https://images.unsplash.com/photo-1610484826967-09c5720778c7?q=80&w=1170&auto=format&fit=crop"
-                    alt="BrainBoost AI tutoring platform interface"
+                    alt="BrainWave AI tutoring platform interface"
                     width={600}
                     height={400}
                     className="object-cover w-full aspect-video"
@@ -324,7 +324,7 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="text-muted-foreground">
-                    "I struggled with math for years until I found BrainBoost. The way it adapts to how I learn has helped me improve my grades from a C to an A- in just one semester!"
+                    "I struggled with math for years until I found BrainWave. The way it adapts to how I learn has helped me improve my grades from a C to an A- in just one semester!"
                   </p>
                 </CardContent>
                 <CardFooter>
@@ -355,7 +355,7 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="text-muted-foreground">
-                    "As a working student, I needed flexibility. BrainBoost lets me study whenever I have time, and the personalized approach helped me understand complex physics concepts I was struggling with."
+                    "As a working student, I needed flexibility. BrainWave lets me study whenever I have time, and the personalized approach helped me understand complex physics concepts I was struggling with."
                   </p>
                 </CardContent>
                 <CardFooter>
@@ -386,7 +386,7 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="text-muted-foreground">
-                    "Preparing for my MCAT was overwhelming until I found BrainBoost. The way it identified and targeted my knowledge gaps was incredible. I scored in the 90th percentile!"
+                    "Preparing for my MCAT was overwhelming until I found BrainWave. The way it identified and targeted my knowledge gaps was incredible. I scored in the 90th percentile!"
                   </p>
                 </CardContent>
                 <CardFooter>
@@ -580,27 +580,27 @@ export default function Home() {
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2">
-                  <AccordionTrigger>Is BrainBoost effective for all subjects?</AccordionTrigger>
+                  <AccordionTrigger>Is BrainWave effective for all subjects?</AccordionTrigger>
                   <AccordionContent>
-                    Yes! BrainBoost is designed to work across all major academic subjects including math, science, language arts, social studies, and more. Our AI is trained on comprehensive educational content and can adapt to the specific requirements of each subject area. We regularly update our content to align with current educational standards.
+                    Yes! BrainWave is designed to work across all major academic subjects including math, science, language arts, social studies, and more. Our AI is trained on comprehensive educational content and can adapt to the specific requirements of each subject area. We regularly update our content to align with current educational standards.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3">
-                  <AccordionTrigger>Can BrainBoost replace human tutors?</AccordionTrigger>
+                  <AccordionTrigger>Can BrainWave replace human tutors?</AccordionTrigger>
                   <AccordionContent>
-                    BrainBoost is designed to complement human teaching, not replace it. While our AI provides personalized learning experiences and immediate feedback 24/7, we believe in the value of human connection in education. Our Premium plan includes access to live tutors who work alongside the AI system to provide the best of both worlds.
+                    BrainWave is designed to complement human teaching, not replace it. While our AI provides personalized learning experiences and immediate feedback 24/7, we believe in the value of human connection in education. Our Premium plan includes access to live tutors who work alongside the AI system to provide the best of both worlds.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-4">
-                  <AccordionTrigger>How does BrainBoost protect student privacy?</AccordionTrigger>
+                  <AccordionTrigger>How does BrainWave protect student privacy?</AccordionTrigger>
                   <AccordionContent>
-                    We take privacy extremely seriously. BrainBoost is fully FERPA and COPPA compliant, meaning we adhere to federal regulations for protecting student data. We use advanced encryption for all data, never sell personal information, and give users full control over their data. Parents and students can request data deletion at any time.
+                    We take privacy extremely seriously. BrainWave is fully FERPA and COPPA compliant, meaning we adhere to federal regulations for protecting student data. We use advanced encryption for all data, never sell personal information, and give users full control over their data. Parents and students can request data deletion at any time.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-5">
-                  <AccordionTrigger>What devices can I use BrainBoost on?</AccordionTrigger>
+                  <AccordionTrigger>What devices can I use BrainWave on?</AccordionTrigger>
                   <AccordionContent>
-                    BrainBoost is available on any device with an internet connection. We have dedicated apps for iOS and Android devices, and our web platform works on all modern browsers. Premium users can also access certain features offline after initial download.
+                    BrainWave is available on any device with an internet connection. We have dedicated apps for iOS and Android devices, and our web platform works on all modern browsers. Premium users can also access certain features offline after initial download.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-6">
@@ -623,7 +623,7 @@ export default function Home() {
                   Ready to Transform Your Learning Experience?
                 </h2>
                 <p className="max-w-[700px] md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed mx-auto">
-                  Join thousands of students who are achieving their academic goals with BrainBoost.
+                  Join thousands of students who are achieving their academic goals with BrainWave.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 min-[400px]:flex-row">
@@ -647,7 +647,7 @@ export default function Home() {
             <div className="col-span-2 lg:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <Brain className="h-6 w-6 text-primary" />
-                <span className="text-xl font-bold">BrainBoost</span>
+                <span className="text-xl font-bold">BrainWave</span>
               </div>
               <p className="text-muted-foreground mb-4">
                 Personalized AI tutoring that adapts to your unique learning style.
@@ -705,7 +705,7 @@ export default function Home() {
           </div>
           <div className="border-t mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              © 2025 BrainBoost AI. All rights reserved.
+              © 2025 BrainWave AI. All rights reserved.
             </p>
             <p className="text-sm text-muted-foreground mt-4 md:mt-0">
               Made with ❤️ for students everywhere
