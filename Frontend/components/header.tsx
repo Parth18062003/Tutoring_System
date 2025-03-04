@@ -111,8 +111,8 @@ export function Header() {
             >
               Login
             </Link>
-            <Button className="flex h-12 items-center justify-center rounded-lg bg-[#b3cdff] px-5 text-zinc-950 text-lg hover:bg-[#b3cdff] shadow-none hover:shadow-lg hover:shadow-[#7091E6]">
-              Hover me
+            <Button className="hidden md:flex h-12 items-center justify-center rounded-lg bg-[#a1c1fd] px-5 text-zinc-950 text-lg hover:bg-[#b3cdff] shadow-none hover:shadow-lg hover:shadow-[#7091E6]">
+              Get Started
             </Button>
           </div>
         </nav>

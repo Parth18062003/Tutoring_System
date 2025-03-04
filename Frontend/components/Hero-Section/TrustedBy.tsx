@@ -4,6 +4,7 @@ import edx from '../../public/edx.png'
 import coursera from '../../public/coursera.png'
 import udemy from '../../public/udemy.jpg'
 import khanacademy from '../../public/khanacademy.jpg'
+import physics_wallah from "../../public/physics_wallah.png"
 
 const TrustedBy = () => {
   // Create an array of images and their alt text
@@ -11,7 +12,8 @@ const TrustedBy = () => {
     { src: edx, alt: 'Edx Logo' },
     { src: coursera, alt: 'Coursera Logo' },
     { src: udemy, alt: 'Udemy Logo' },
-    { src: khanacademy, alt: 'Khan Academy Logo' }
+    { src: khanacademy, alt: 'Khan Academy Logo' },
+    { src: physics_wallah, alt: 'Physics Wallah Logo' },
   ];
 
   return (
@@ -24,7 +26,7 @@ const TrustedBy = () => {
       <div className="absolute -right-20 bottom-1/4 w-40 h-40 rounded-full bg-[#7874F2]/10 blur-xl animate-pulse-slow" 
            style={{ animationDelay: "1.5s" }}></div>
 
-      <div className="container px-4 md:px-6 relative z-10">
+      <div className="container px-4 md:px-6 relative z-10 mx-auto">
         <div className="flex flex-col items-center justify-center space-y-8 text-center">
           <div className="space-y-3 max-w-2xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-medium tracking-tight bg-gradient-to-r from-[#7874F2] to-[#8E98F5] bg-clip-text text-transparent">
@@ -35,7 +37,7 @@ const TrustedBy = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 items-center justify-center w-full max-w-4xl mx-auto">
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-8 md:gap-12 items-center justify-center w-full max-w-4xl mx-auto">
             {partners.map((partner, index) => (
               <div 
                 key={index} 
