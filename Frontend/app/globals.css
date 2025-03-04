@@ -129,6 +129,59 @@
     }
   }
 
+  @keyframes blob {
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
+  }
+
+  @keyframes bounce-subtle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10%);
+    }
+  }
+
+  /* Scroll Text Animation */
+  @keyframes scroll-text {
+    0% {
+      transform: translateY(0%);
+    }
+    100% {
+      transform: translateY(-50%);
+    }
+  }
+
+  /* Float Particle Animation */
+  @keyframes float-particle {
+    0% {
+      transform: translate(0, 0);
+    }
+    25% {
+      transform: translate(20px, -15px);
+    }
+    50% {
+      transform: translate(-5px, -25px);
+    }
+    75% {
+      transform: translate(-15px, -5px);
+    }
+    100% {
+      transform: translate(0, 0);
+    }
+  }
+  
   @keyframes accordion-up {
     from {
       height: var(--radix-accordion-content-height);

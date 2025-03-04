@@ -4,43 +4,104 @@ import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle, Brain, BookOpen, BarChart, Clock, Shield, Star, ChevronRight, Zap, Award } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  CheckCircle,
+  Brain,
+  BookOpen,
+  BarChart,
+  Clock,
+  Shield,
+  Star,
+  ChevronRight,
+  Zap,
+  Award,
+} from "lucide-react";
+import { Header } from "@/components/header";
+import Footer from "@/components/footer";
+import TrustedBy from "@/components/Hero-Section/TrustedBy";
+import BentoGrid from "@/components/Hero-Section/Features";
 
 export default function Home() {
   const [email, setEmail] = useState("");
 
   return (
-    <div className="flex flex-col min-h-screen px-8">
-      {/* Navigation */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">BrainWave</span>
-          </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-sm font-medium hover:underline underline-offset-4">Features</a>
-            <a href="#how-it-works" className="text-sm font-medium hover:underline underline-offset-4">How It Works</a>
-            <a href="#testimonials" className="text-sm font-medium hover:underline underline-offset-4">Testimonials</a>
-            <a href="#pricing" className="text-sm font-medium hover:underline underline-offset-4">Pricing</a>
-            <a href="#faq" className="text-sm font-medium hover:underline underline-offset-4">FAQ</a>
-          </nav>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" className="hidden md:flex">
-              Log in
-            </Button>
-            <Button size="sm">Get Started</Button>
-          </div>
-        </div>
-      </header>
-
+    <div className="flex flex-col min-h-screen">
+      <Header />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-20 md:py-28 bg-gradient-to-b from-background to-muted">
-          <div className="container px-4 md:px-6">
+        <section className="py-20 md:py-28 min-h-screen w-full">
+          {/* Animated Gradient Blobs */}
+          <div
+            className="absolute -right-[0%] top-[10%] h-[300px] w-[400px] rounded-full bg-[#B1CBFA]/40 blur-[80px] animate-blob-slow overflow-x-hidden"
+            style={{ animationDelay: "0s" }}
+          ></div>
+          <div
+            className="absolute right-[30%] bottom-[10%] h-[250px] w-[150px] rounded-full bg-[#7874F2]/30 blur-[70px] animate-blob-fast overflow-x-hidden"
+            style={{ animationDelay: "4s" }}
+          ></div>
+          <div
+            className="absolute right-[20%] bottom-[20%] h-[180px] w-[100px] rounded-full bg-[#DFE2FE]/50 blur-[60px] animate-blob-medium overflow-x-hidden"
+            style={{ animationDelay: "3s" }}
+          ></div>
+
+          {/* Improved Grid Pattern */}
+          <div
+            className="absolute inset-0 h-full w-full"
+            style={{
+              backgroundImage: `
+        linear-gradient(to right, rgba(223, 226, 254, 0.3) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(142, 152, 245, 0.1) 0.5px, transparent 0.5px)
+      `,
+              backgroundSize: "12rem 10rem",
+            }}
+          >
+            <div className="absolute pointer-events-none inset-0 flex items-center justify-center dark:bg-black bg-white [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+          </div>
+
+          {/* Static randomly highlighted grid cells */}
+          <div className="absolute inset-0 h-full w-full overflow-hidden">
+            <div
+              className="absolute w-[12rem] h-[10rem]"
+              style={{
+                left: "12rem",
+                top: "30rem",
+                backgroundImage:
+                  "linear-gradient(270deg, #8E98F5, rgba(172, 170, 250, 0))",
+                opacity: 0.09,
+              }}
+            ></div>
+
+            <div
+              className="absolute w-[12rem] h-[10rem]"
+              style={{
+                left: "36rem",
+                top: "10rem",
+                backgroundImage:
+                  "linear-gradient(-45deg, #acaafa, rgba(223, 226, 254, 0))",
+                opacity: 0.1,
+              }}
+            ></div>
+          </div>
+
+          {/* Subtle Gradient Overlay */}
+          <div className="absolute inset-0 h-full w-full bg-gradient-to-br from-[#DFE2FE]/5 via-transparent to-[#7874F2]/10 overflow-x-hidden"></div>
+
+          {/*           <div className="container px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
               <div className="flex flex-col justify-center space-y-4">
                 <div className="space-y-2">
@@ -101,104 +162,11 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </section>
+<TrustedBy />
 
-        {/* Trusted By Section */}
-        <section className="py-12 border-y bg-muted/50">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h2 className="text-xl font-medium tracking-tight">Trusted by educators and students worldwide</h2>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12 lg:gap-16 grayscale opacity-70">
-                <div className="flex items-center justify-center">
-                  <Image src="https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?q=80&w=250&auto=format&fit=crop" alt="University Logo" width={120} height={40} className="h-8 w-auto object-contain" />
-                </div>
-                <div className="flex items-center justify-center">
-                  <Image src="https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?q=80&w=250&auto=format&fit=crop" alt="Education Partner Logo" width={120} height={40} className="h-8 w-auto object-contain" />
-                </div>
-                <div className="flex items-center justify-center">
-                  <Image src="https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?q=80&w=250&auto=format&fit=crop" alt="Tech Partner Logo" width={120} height={40} className="h-8 w-auto object-contain" />
-                </div>
-                <div className="flex items-center justify-center">
-                  <Image src="https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?q=80&w=250&auto=format&fit=crop" alt="School District Logo" width={120} height={40} className="h-8 w-auto object-contain" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section id="features" className="py-20 md:py-28">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <Badge variant="outline" className="mb-2">Features</Badge>
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                  Smarter Learning, Better Results
-                </h2>
-                <p className="max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed mx-auto">
-                  Our AI-powered platform offers a comprehensive suite of tools designed to enhance your learning experience.
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-16">
-              <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <Brain className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle>Adaptive Learning</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Our AI analyzes your learning patterns and adjusts content difficulty in real-time to optimize your progress.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <BookOpen className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle>Personalized Curriculum</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Get a custom learning path based on your goals, strengths, and areas that need improvement.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <BarChart className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle>Progress Tracking</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Detailed analytics and insights help you understand your learning journey and celebrate milestones.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="border-none shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <Clock className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle>24/7 Availability</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Learn at your own pace with unlimited access to tutoring sessions whenever inspiration strikes.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
+<BentoGrid />
 
         {/* How It Works Section */}
         <section id="how-it-works" className="py-20 md:py-28 bg-muted">
@@ -206,56 +174,71 @@ export default function Home() {
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
               <div className="flex flex-col justify-center space-y-4">
                 <div className="space-y-2">
-                  <Badge variant="outline" className="mb-2">How It Works</Badge>
+                  <Badge variant="outline" className="mb-2">
+                    How It Works
+                  </Badge>
                   <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                     AI That Understands How You Learn
                   </h2>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                    Our advanced AI technology creates a learning experience as unique as you are, without the complexity.
+                    Our advanced AI technology creates a learning experience as
+                    unique as you are, without the complexity.
                   </p>
                 </div>
                 <div className="space-y-4">
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                      <span className="text-primary-foreground font-medium">1</span>
+                      <span className="text-primary-foreground font-medium">
+                        1
+                      </span>
                     </div>
                     <div>
                       <h3 className="text-xl font-bold">Assessment</h3>
                       <p className="text-muted-foreground">
-                        A quick diagnostic test identifies your current knowledge level and learning preferences.
+                        A quick diagnostic test identifies your current
+                        knowledge level and learning preferences.
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                      <span className="text-primary-foreground font-medium">2</span>
+                      <span className="text-primary-foreground font-medium">
+                        2
+                      </span>
                     </div>
                     <div>
                       <h3 className="text-xl font-bold">Personalization</h3>
                       <p className="text-muted-foreground">
-                        Our AI creates a custom learning plan tailored to your specific needs and goals.
+                        Our AI creates a custom learning plan tailored to your
+                        specific needs and goals.
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                      <span className="text-primary-foreground font-medium">3</span>
+                      <span className="text-primary-foreground font-medium">
+                        3
+                      </span>
                     </div>
                     <div>
                       <h3 className="text-xl font-bold">Adaptive Learning</h3>
                       <p className="text-muted-foreground">
-                        As you progress, the system continuously adjusts to optimize your learning experience.
+                        As you progress, the system continuously adjusts to
+                        optimize your learning experience.
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                      <span className="text-primary-foreground font-medium">4</span>
+                      <span className="text-primary-foreground font-medium">
+                        4
+                      </span>
                     </div>
                     <div>
                       <h3 className="text-xl font-bold">Mastery</h3>
                       <p className="text-muted-foreground">
-                        Regular assessments ensure you've truly mastered concepts before moving forward.
+                        Regular assessments ensure you've truly mastered
+                        concepts before moving forward.
                       </p>
                     </div>
                   </div>
@@ -290,12 +273,15 @@ export default function Home() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <Badge variant="outline" className="mb-2">Testimonials</Badge>
+                <Badge variant="outline" className="mb-2">
+                  Testimonials
+                </Badge>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   Success Stories from Real Students
                 </h2>
                 <p className="max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed mx-auto">
-                  Hear from students who have transformed their learning experience with our AI tutoring system.
+                  Hear from students who have transformed their learning
+                  experience with our AI tutoring system.
                 </p>
               </div>
             </div>
@@ -320,11 +306,16 @@ export default function Home() {
                 <CardContent>
                   <div className="flex mb-2">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                      <Star
+                        key={i}
+                        className="h-4 w-4 fill-primary text-primary"
+                      />
                     ))}
                   </div>
                   <p className="text-muted-foreground">
-                    "I struggled with math for years until I found BrainWave. The way it adapts to how I learn has helped me improve my grades from a C to an A- in just one semester!"
+                    "I struggled with math for years until I found BrainWave.
+                    The way it adapts to how I learn has helped me improve my
+                    grades from a C to an A- in just one semester!"
                   </p>
                 </CardContent>
                 <CardFooter>
@@ -351,11 +342,17 @@ export default function Home() {
                 <CardContent>
                   <div className="flex mb-2">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                      <Star
+                        key={i}
+                        className="h-4 w-4 fill-primary text-primary"
+                      />
                     ))}
                   </div>
                   <p className="text-muted-foreground">
-                    "As a working student, I needed flexibility. BrainWave lets me study whenever I have time, and the personalized approach helped me understand complex physics concepts I was struggling with."
+                    "As a working student, I needed flexibility. BrainWave lets
+                    me study whenever I have time, and the personalized approach
+                    helped me understand complex physics concepts I was
+                    struggling with."
                   </p>
                 </CardContent>
                 <CardFooter>
@@ -382,15 +379,22 @@ export default function Home() {
                 <CardContent>
                   <div className="flex mb-2">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                      <Star
+                        key={i}
+                        className="h-4 w-4 fill-primary text-primary"
+                      />
                     ))}
                   </div>
                   <p className="text-muted-foreground">
-                    "Preparing for my MCAT was overwhelming until I found BrainWave. The way it identified and targeted my knowledge gaps was incredible. I scored in the 90th percentile!"
+                    "Preparing for my MCAT was overwhelming until I found
+                    BrainWave. The way it identified and targeted my knowledge
+                    gaps was incredible. I scored in the 90th percentile!"
                   </p>
                 </CardContent>
                 <CardFooter>
-                  <Badge variant="outline">MCAT Prep • Score Improvement: 28%</Badge>
+                  <Badge variant="outline">
+                    MCAT Prep • Score Improvement: 28%
+                  </Badge>
                 </CardFooter>
               </Card>
             </div>
@@ -402,7 +406,9 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-4xl font-bold">32%</p>
-                  <p className="text-muted-foreground">Average Grade Improvement</p>
+                  <p className="text-muted-foreground">
+                    Average Grade Improvement
+                  </p>
                 </div>
                 <div>
                   <p className="text-4xl font-bold">3x</p>
@@ -422,12 +428,15 @@ export default function Home() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <Badge variant="outline" className="mb-2">Pricing</Badge>
+                <Badge variant="outline" className="mb-2">
+                  Pricing
+                </Badge>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   Simple, Transparent Pricing
                 </h2>
                 <p className="max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed mx-auto">
-                  Choose the plan that fits your learning needs. All plans include our core AI tutoring technology.
+                  Choose the plan that fits your learning needs. All plans
+                  include our core AI tutoring technology.
                 </p>
               </div>
             </div>
@@ -443,7 +452,12 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="flex-1">
                   <ul className="space-y-2">
-                    {["5 subjects", "Basic AI tutoring", "Progress tracking", "Mobile access"].map((feature) => (
+                    {[
+                      "5 subjects",
+                      "Basic AI tutoring",
+                      "Progress tracking",
+                      "Mobile access",
+                    ].map((feature) => (
                       <li key={feature} className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-primary" />
                         <span>{feature}</span>
@@ -457,7 +471,9 @@ export default function Home() {
               </Card>
               <Card className="border-none shadow-md flex flex-col relative bg-card before:absolute before:inset-0 before:bg-gradient-to-b before:from-primary/20 before:to-transparent before:rounded-lg before:-m-[1px] before:z-0">
                 <div className="absolute -top-4 left-0 right-0 flex justify-center">
-                  <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+                  <Badge className="bg-primary text-primary-foreground">
+                    Most Popular
+                  </Badge>
                 </div>
                 <CardHeader className="relative z-10">
                   <CardTitle>Standard</CardTitle>
@@ -465,7 +481,9 @@ export default function Home() {
                     <span className="text-4xl font-bold">$19</span>
                     <span className="text-muted-foreground">/month</span>
                   </div>
-                  <CardDescription>Ideal for dedicated students</CardDescription>
+                  <CardDescription>
+                    Ideal for dedicated students
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 relative z-10">
                   <ul className="space-y-2">
@@ -475,7 +493,7 @@ export default function Home() {
                       "Detailed analytics",
                       "Practice tests",
                       "Study plan creation",
-                      "Mobile access"
+                      "Mobile access",
                     ].map((feature) => (
                       <li key={feature} className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-primary" />
@@ -495,7 +513,9 @@ export default function Home() {
                     <span className="text-4xl font-bold">$29</span>
                     <span className="text-muted-foreground">/month</span>
                   </div>
-                  <CardDescription>For serious academic achievement</CardDescription>
+                  <CardDescription>
+                    For serious academic achievement
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1">
                   <ul className="space-y-2">
@@ -506,7 +526,7 @@ export default function Home() {
                       "Advanced simulations",
                       "Parent/teacher dashboard",
                       "Exam preparation",
-                      "Offline access"
+                      "Offline access",
                     ].map((feature) => (
                       <li key={feature} className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-primary" />
@@ -522,7 +542,8 @@ export default function Home() {
             </div>
             <div className="mt-8 text-center">
               <p className="text-muted-foreground">
-                All plans come with a 14-day free trial. No credit card required.
+                All plans come with a 14-day free trial. No credit card
+                required.
               </p>
             </div>
           </div>
@@ -533,7 +554,9 @@ export default function Home() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h2 className="text-xl font-medium tracking-tight">Your data is safe with us</h2>
+                <h2 className="text-xl font-medium tracking-tight">
+                  Your data is safe with us
+                </h2>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-8">
                 <div className="flex items-center gap-2">
@@ -562,7 +585,9 @@ export default function Home() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <Badge variant="outline" className="mb-2">FAQ</Badge>
+                <Badge variant="outline" className="mb-2">
+                  FAQ
+                </Badge>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   Frequently Asked Questions
                 </h2>
@@ -574,39 +599,79 @@ export default function Home() {
             <div className="mx-auto max-w-3xl mt-12">
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="item-1">
-                  <AccordionTrigger>How does the AI tutoring actually work?</AccordionTrigger>
+                  <AccordionTrigger>
+                    How does the AI tutoring actually work?
+                  </AccordionTrigger>
                   <AccordionContent>
-                    Our AI tutoring system uses machine learning algorithms to analyze your learning patterns, strengths, and areas for improvement. It creates a personalized learning path and adapts in real-time as you progress. The system identifies knowledge gaps and provides targeted content to address them, ensuring you master concepts before moving forward.
+                    Our AI tutoring system uses machine learning algorithms to
+                    analyze your learning patterns, strengths, and areas for
+                    improvement. It creates a personalized learning path and
+                    adapts in real-time as you progress. The system identifies
+                    knowledge gaps and provides targeted content to address
+                    them, ensuring you master concepts before moving forward.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2">
-                  <AccordionTrigger>Is BrainWave effective for all subjects?</AccordionTrigger>
+                  <AccordionTrigger>
+                    Is BrainWave effective for all subjects?
+                  </AccordionTrigger>
                   <AccordionContent>
-                    Yes! BrainWave is designed to work across all major academic subjects including math, science, language arts, social studies, and more. Our AI is trained on comprehensive educational content and can adapt to the specific requirements of each subject area. We regularly update our content to align with current educational standards.
+                    Yes! BrainWave is designed to work across all major academic
+                    subjects including math, science, language arts, social
+                    studies, and more. Our AI is trained on comprehensive
+                    educational content and can adapt to the specific
+                    requirements of each subject area. We regularly update our
+                    content to align with current educational standards.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-3">
-                  <AccordionTrigger>Can BrainWave replace human tutors?</AccordionTrigger>
+                  <AccordionTrigger>
+                    Can BrainWave replace human tutors?
+                  </AccordionTrigger>
                   <AccordionContent>
-                    BrainWave is designed to complement human teaching, not replace it. While our AI provides personalized learning experiences and immediate feedback 24/7, we believe in the value of human connection in education. Our Premium plan includes access to live tutors who work alongside the AI system to provide the best of both worlds.
+                    BrainWave is designed to complement human teaching, not
+                    replace it. While our AI provides personalized learning
+                    experiences and immediate feedback 24/7, we believe in the
+                    value of human connection in education. Our Premium plan
+                    includes access to live tutors who work alongside the AI
+                    system to provide the best of both worlds.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-4">
-                  <AccordionTrigger>How does BrainWave protect student privacy?</AccordionTrigger>
+                  <AccordionTrigger>
+                    How does BrainWave protect student privacy?
+                  </AccordionTrigger>
                   <AccordionContent>
-                    We take privacy extremely seriously. BrainWave is fully FERPA and COPPA compliant, meaning we adhere to federal regulations for protecting student data. We use advanced encryption for all data, never sell personal information, and give users full control over their data. Parents and students can request data deletion at any time.
+                    We take privacy extremely seriously. BrainWave is fully
+                    FERPA and COPPA compliant, meaning we adhere to federal
+                    regulations for protecting student data. We use advanced
+                    encryption for all data, never sell personal information,
+                    and give users full control over their data. Parents and
+                    students can request data deletion at any time.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-5">
-                  <AccordionTrigger>What devices can I use BrainWave on?</AccordionTrigger>
+                  <AccordionTrigger>
+                    What devices can I use BrainWave on?
+                  </AccordionTrigger>
                   <AccordionContent>
-                    BrainWave is available on any device with an internet connection. We have dedicated apps for iOS and Android devices, and our web platform works on all modern browsers. Premium users can also access certain features offline after initial download.
+                    BrainWave is available on any device with an internet
+                    connection. We have dedicated apps for iOS and Android
+                    devices, and our web platform works on all modern browsers.
+                    Premium users can also access certain features offline after
+                    initial download.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-6">
-                  <AccordionTrigger>How long does it take to see results?</AccordionTrigger>
+                  <AccordionTrigger>
+                    How long does it take to see results?
+                  </AccordionTrigger>
                   <AccordionContent>
-                    Most students begin to see improvements within 2-4 weeks of regular use. The exact timeline depends on individual learning goals, frequency of use, and starting knowledge level. Our analytics dashboard shows progress in real-time so you can track improvements as they happen.
+                    Most students begin to see improvements within 2-4 weeks of
+                    regular use. The exact timeline depends on individual
+                    learning goals, frequency of use, and starting knowledge
+                    level. Our analytics dashboard shows progress in real-time
+                    so you can track improvements as they happen.
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -623,7 +688,8 @@ export default function Home() {
                   Ready to Transform Your Learning Experience?
                 </h2>
                 <p className="max-w-[700px] md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed mx-auto">
-                  Join thousands of students who are achieving their academic goals with BrainWave.
+                  Join thousands of students who are achieving their academic
+                  goals with BrainWave.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 min-[400px]:flex-row">
@@ -634,85 +700,14 @@ export default function Home() {
                   Schedule Demo
                 </Button>
               </div>
-              <p className="text-sm">No credit card required. 14-day free trial.</p>
+              <p className="text-sm">
+                No credit card required. 14-day free trial.
+              </p>
             </div>
           </div>
         </section>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t py-12 md:py-16">
-        <div className="container px-4 md:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
-            <div className="col-span-2 lg:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <Brain className="h-6 w-6 text-primary" />
-                <span className="text-xl font-bold">BrainWave</span>
-              </div>
-              <p className="text-muted-foreground mb-4">
-                Personalized AI tutoring that adapts to your unique learning style.
-              </p>
-              <div className="flex gap-4">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
-                  </svg>
-                  <span className="sr-only">Facebook</span>
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                    <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
-                  </svg>
-                  <span className="sr-only">Twitter</span>
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                    <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
-                  </svg>
-                  <span className="sr-only">Instagram</span>
-                </Button>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-base font-medium mb-4">Product</h3>
-              <ul className="space-y-2">
-                <li><a href="#features" className="text-muted-foreground hover:text-foreground">Features</a></li>
-                <li><a href="#pricing" className="text-muted-foreground hover:text-foreground">Pricing</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Testimonials</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Case Studies</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-base font-medium mb-4">Company</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">About</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Blog</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Careers</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-base font-medium mb-4">Resources</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Help Center</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Privacy</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Terms</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-foreground">Accessibility</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              © 2025 BrainWave AI. All rights reserved.
-            </p>
-            <p className="text-sm text-muted-foreground mt-4 md:mt-0">
-              Made with ❤️ for students everywhere
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
