@@ -17,7 +17,7 @@ const TrustedBy = () => {
   ];
 
   return (
-    <section className="py-16 bg-transparent relative overflow-hidden">
+    <section className="pb-16 bg-transparent relative overflow-hidden">
       {/* Subtle blue background effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#DFE2FE]/10 to-transparent"></div>
 

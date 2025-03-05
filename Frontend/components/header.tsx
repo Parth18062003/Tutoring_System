@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Brain, Menu, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Brain } from "lucide-react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,6 @@ const navLinks = [
 ];
 
 export function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   // Handle scroll shadow effect
@@ -27,30 +26,6 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Prevent body scrolling when mobile menu is open
-  useEffect(() => {
-    if (isMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "auto";
-    }
-    return () => {
-      document.body.style.overflow = "auto"; // Cleanup on unmount
-    };
-  }, [isMenuOpen]);
-
-  const linkVariants = {
-    hover: {
-      scale: 1.05,
-      y: -2,
-      transition: { duration: 0.2, ease: "easeOut" },
-    },
-    tap: {
-      scale: 0.95,
-      transition: { duration: 0.1 },
-    },
-  };
 
   return (
     <header
@@ -91,27 +66,25 @@ export function Header() {
           <ul className="hidden md:flex items-center gap-4">
             {navLinks.map((link) => (
               <li key={link.href}>
-
-                  <Link
-                    href={link.href}
-                    className="text-md font-medium text-[#5d76c4] hover:text-[#3d52a0] transition-colors relative"
-                  >
-                    {link.label}
-
-                  </Link>
+                <Link
+                  href={link.href}
+                  className="text-md font-medium text-[#5d76c4] hover:text-[#3d52a0] transition-colors relative"
+                >
+                  {link.label}
+                </Link>
               </li>
             ))}
           </ul>
 
           {/* Desktop Buttons */}
-          <div className="hidden md:flex items-center gap-5">
+          <div className="flex items-center gap-5">
             <Link
               href="/login"
-              className="relative after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-bottom-right after:scale-x-0 after:bg-[#3D52A0] after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.65_0.05_0.36_1)] hover:after:origin-bottom-left hover:after:scale-x-100 hover:text-[#3D52A0] text-lg"
+              className="hidden md:flex relative after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:origin-bottom-right after:scale-x-0 after:bg-[#3D52A0] after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.65_0.05_0.36_1)] hover:after:origin-bottom-left hover:after:scale-x-100 hover:text-[#3D52A0] text-lg"
             >
               Login
             </Link>
-            <Button className="hidden md:flex h-12 items-center justify-center rounded-lg bg-[#a1c1fd] px-5 text-zinc-950 text-lg hover:bg-[#b3cdff] shadow-none hover:shadow-lg hover:shadow-[#7091E6]">
+            <Button className="flex h-10 md:h-12 items-center justify-center rounded-lg bg-[#a1c1fd] px-2 md:px-5 text-zinc-950 text-md md:text-lg hover:bg-[#b3cdff] shadow-none hover:shadow-lg hover:shadow-[#7091E6]">
               Get Started
             </Button>
           </div>
