@@ -17,7 +17,6 @@ const navLinks = [
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
-
   // Handle scroll shadow effect
   useEffect(() => {
     const handleScroll = () => {

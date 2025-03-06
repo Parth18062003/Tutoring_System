@@ -31,7 +31,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.1 }}
             className="text-6xl md:text-7xl font-bold mb-6"
           >
-            <span className="text-[#7091e6]">Brain Wave</span>
+            <span className="bg-gradient-to-t from-[#3D52A0] to-[#7091E6] text-transparent bg-clip-text">Brain Wave</span>
           </motion.h1>
 
           {/* Subtitle with typing animation */}
