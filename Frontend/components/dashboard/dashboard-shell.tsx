@@ -15,8 +15,8 @@ export function DashboardShell({
   return (
     <SidebarProvider>
       <ProfileSidebar />
-      <main className={cn("flex flex-col gap-6", className)} {...props}>
-        <SidebarTrigger />
+      <SidebarTrigger />
+      <main className={cn("flex flex-col gap-6 py-4 mx-auto max-w-6xl", className)} {...props}>
         {children}
       </main>
     </SidebarProvider>

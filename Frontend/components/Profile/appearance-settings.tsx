@@ -11,8 +11,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { CheckCircle2 } from "lucide-react";
+import { CheckIcon, MinusIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import Image from "next/image";
 
 const appearanceFormSchema = z.object({
   theme: z.enum(["system", "light", "dark"]),
@@ -67,36 +68,41 @@ export function AppearanceSettings() {
                       className="grid grid-cols-3 gap-4"
                     >
                       {[
-                        { id: "system", label: "System", description: "Follow system theme" },
-                        { id: "light", label: "Light", description: "Light theme" },
-                        { id: "dark", label: "Dark", description: "Dark theme" },
+                        { id: "system", label: "System", description: "Follow system theme", img: "/ui-system.png" },
+                        { id: "light", label: "Light", description: "Light theme", img: "/ui-light.png" },
+                        { id: "dark", label: "Dark", description: "Dark theme", img: "/ui-dark.png" },
                       ].map((item) => (
-                        <FormItem key={item.id}>
-                          <FormLabel className="[&:has([data-state=checked])>div]:border-primary">
-                            <FormControl>
-                              <RadioGroupItem value={item.id} className="sr-only" />
-                            </FormControl>
-                            <div className={`border-2 rounded-md p-4 cursor-pointer flex flex-col items-center hover:bg-muted/60 ${
-                              field.value === item.id 
-                                ? "border-[#7091e6] bg-[#7091e6]/5" 
-                                : "border-muted"
-                            }`}>
-                              <div className={`h-10 w-10 rounded-full mb-2 ${
-                                item.id === "system" 
-                                  ? "bg-gradient-to-r from-white to-black" 
-                                  : item.id === "light"
-                                    ? "bg-white border border-gray-200" 
-                                    : "bg-slate-800"
-                              }`} />
-                              <span className="font-medium text-sm">
-                                {item.label}
-                              </span>
-                              {field.value === item.id && (
-                                <CheckCircle2 className="absolute top-3 right-3 h-4 w-4 text-[#7091e6]" />
-                              )}
-                            </div>
-                          </FormLabel>
-                        </FormItem>
+                        <FormItem key={item.id} className="flex flex-col items-center">
+                        <FormLabel className="flex flex-col items-center cursor-pointer">
+                          <FormControl>
+                            <RadioGroupItem value={item.id} className="sr-only" />
+                          </FormControl>
+                          
+                          <div className="flex flex-col items-center space-y-2">
+                            <Image
+                              src={item.img}
+                              alt={item.label}
+                              width={88}
+                              height={70}
+                              className="border-input peer-focus-visible:ring-ring/50 peer-data-[state=checked]:border-ring peer-data-[state=checked]:bg-accent relative cursor-pointer overflow-hidden rounded-md border shadow-xs transition-[color,box-shadow] outline-none peer-focus-visible:ring-[3px] peer-data-disabled:cursor-not-allowed peer-data-disabled:opacity-50"
+                            />
+                            
+                            <span className="group flex items-center gap-2 text-center">
+                              <CheckIcon
+                                size={16}
+                                className="group-peer-data-[state=unchecked]:hidden text-green-500"
+                                aria-hidden="true"
+                              />
+                              <MinusIcon
+                                size={16}
+                                className="group-peer-data-[state=checked]:hidden text-gray-400"
+                                aria-hidden="true"
+                              />
+                              <span className="text-xs font-medium">{item.label}</span>
+                            </span>
+                          </div>
+                        </FormLabel>
+                      </FormItem>
                       ))}
                     </RadioGroup>
                   </FormControl>

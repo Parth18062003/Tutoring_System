@@ -22,7 +22,7 @@ export default function ProfilePage() {
         lastLogin="2025-03-07 16:57:26"
       />
       
-      <div className="grid gap-6 md:grid-cols-12">
+      <div className="grid gap-6 md:grid-cols-12 ">
         <ProfileCard className="md:col-span-4" />
         
         <div className="md:col-span-8">
