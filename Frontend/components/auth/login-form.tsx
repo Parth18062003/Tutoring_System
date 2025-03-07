@@ -22,15 +22,10 @@ import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import GoogleOauth from "./google-oauth";
-
-// Define the validation schema
-const loginSchema = z.object({
-  email: z
-    .string()
-    .email({ message: "Please enter a valid email address" })
-    .min(1, { message: "Email is required" }),
-  password: z.string().min(1, { message: "Password is required" }),
-});
+import { loginSchema } from "@/lib/schema";
+import { genSaltSync, hashSync } from "bcrypt-ts";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 // Type for the form values based on the schema
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -41,6 +36,7 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const router = useRouter();
 
   // Initialize form with validation schema
   const form = useForm<LoginFormValues>({
@@ -55,16 +51,20 @@ export function LoginForm({
   const onSubmit = async (values: LoginFormValues) => {
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      signIn("credentials", {
+        email: values.email,
+        password: values.password
+      });
 
       console.log("Login attempt:", values);
 
       toast({
         title: "Login successful!",
-        description: "Welcome back to Acme Inc.",
+        description: "Welcome back to Brain Wave.",
       });
 
+      router.push("/dashboard/profile"); // Redirect to dashboard after successful login
       // Don't reset form after successful login as user is navigating away
     } catch (error) {
       toast({

@@ -76,24 +76,26 @@ const HomePage = () => {
             {/* Subtle Gradient Overlay */}
             <div className="absolute inset-0 h-full w-full bg-gradient-to-br from-[#DFE2FE]/5 via-transparent to-[#7874F2]/10 overflow-x-hidden"></div>
 
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent h-px w-3/5 mx-auto"></div>
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent blur-sm h-2 w-3/5 mx-auto"></div>
             <Hero />
           </section>
           <Suspense fallback={<div>Loading...</div>}>
-          <TrustedBy />
+            <TrustedBy />
 
-          <BentoGrid />
+            <BentoGrid />
 
-          {/* How It Works Section */}
-          <LearningJourney />
-          {/*  <AITechnology /> */}
+            {/* How It Works Section */}
+            <LearningJourney />
+            {/*  <AITechnology /> */}
 
-          {/* Testimonials Section */}
-          <Testimonials />
+            {/* Testimonials Section */}
+            <Testimonials />
 
-          {/* FAQ Section */}
-          <Faq />
-          {/* CTA Section */}
-          <CallToAction />
+            {/* FAQ Section */}
+            <Faq />
+            {/* CTA Section */}
+            <CallToAction />
           </Suspense>
         </main>
         <Footer />

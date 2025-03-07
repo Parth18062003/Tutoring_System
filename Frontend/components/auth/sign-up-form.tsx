@@ -22,25 +22,10 @@ import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import GoogleOauth from "./google-oauth";
-
-// Define the validation schema
-const signUpSchema = z.object({
-  firstName: z
-    .string()
-    .min(2, { message: "First name must be at least 2 characters" }),
-  lastName: z.string(),
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters" })
-    .regex(/[A-Z]/, {
-      message: "Password must contain at least one uppercase letter",
-    })
-    .regex(/[a-z]/, {
-      message: "Password must contain at least one lowercase letter",
-    })
-    .regex(/[0-9]/, { message: "Password must contain at least one number" }),
-});
+import { signUpSchema } from "@/lib/schema";
+import { signIn } from "next-auth/react";
+import { genSaltSync, hashSync } from "bcrypt-ts";
+import { useRouter } from "next/navigation";
 
 // Type for the form values based on the schema
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -51,6 +36,7 @@ export function SignUpForm({
 }: React.ComponentProps<"div">) {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const router = useRouter();
 
   // Initialize form with validation schema
   const form = useForm<SignUpFormValues>({
@@ -67,10 +53,24 @@ export function SignUpForm({
   const onSubmit = async (values: SignUpFormValues) => {
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const salt = genSaltSync(12)
+      const hashedpassword = hashSync(values.password, salt);
+      const name = values.firstName + " " + values.lastName;
 
-      console.log("Form submitted:", values);
+      const response = await fetch("/api/auth/sign-up", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: values.email,
+          password: hashedpassword,
+          name: name,
+        }),
+      });
+  
+      const data = await response.json();
+      console.log("Form submitted:", data);
 
       toast({
         title: "Account created successfully!",
@@ -79,6 +79,7 @@ export function SignUpForm({
 
       // Reset form after submission
       form.reset();
+      router.push("/dashboard/profile");
     } catch (error) {
       toast({
         title: "Error",

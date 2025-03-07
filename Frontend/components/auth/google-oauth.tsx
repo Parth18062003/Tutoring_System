@@ -9,7 +9,7 @@ export default function GoogleOauth() {
       variant="outline"
       className="w-full z-10"
       type="button"
-      onClick={() => signIn("google")}
+      onClick={() => signIn("google", { callbackUrl: "/dashboard/profile" })}
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <path
