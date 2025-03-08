@@ -26,6 +26,24 @@ export const signUpSchema = z.object({
     .regex(/[0-9]/, { message: "Password must contain at least one number" }),
 });
 
+export const personalInfoSchema = z.object({
+  fullName: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
+  }),
+  displayName: z.string().min(2, {
+    message: "Display name must be at least 2 characters.",
+  }).optional(),
+  bio: z.string().max(500, {
+    message: "Bio must be 255 characters or less.",
+  }).optional(),
+  dateOfBirth: z.string().optional(),
+  location: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  school: z.string().optional(),
+  grade: z.string().optional(),
+  gender: z.string().optional(),
+});
+
 type LoginSchema = z.infer<typeof loginSchema>;
 
 export { loginSchema, type LoginSchema };

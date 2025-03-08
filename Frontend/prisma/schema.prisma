@@ -12,7 +12,20 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
- 
+
+enum Role {
+  USER
+  ADMIN
+  PARENT
+} 
+
+enum Gender {
+  MALE
+  FEMALE
+  NONBINARY
+  OTHER
+}
+
 model User {
   id            String          @id @default(cuid())
   name          String?
@@ -22,7 +35,15 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
- 
+  role          Role            @default(USER)
+  bio           String?         @db.VarChar(255)
+  dob           String?
+  phone         Int?
+  address       String?          @db.VarChar(255) 
+  gender        Gender?
+  school        String?
+  grade         String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

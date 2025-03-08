@@ -33,6 +33,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@upstash/ratelimit": "^2.0.5",
     "@upstash/redis": "^1.34.5",
+    "@vercel/functions": "^2.0.0",
     "bcrypt-ts": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
