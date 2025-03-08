@@ -18,14 +18,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import GoogleOauth from "./google-oauth";
 import { loginSchema } from "@/lib/schema";
-import { genSaltSync, hashSync } from "bcrypt-ts";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 // Type for the form values based on the schema
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -36,6 +35,7 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   // Initialize form with validation schema
@@ -47,31 +47,32 @@ export function LoginForm({
     },
   });
 
-  // Handle form submission
   const onSubmit = async (values: LoginFormValues) => {
     setIsSubmitting(true);
+    setError(null);
+    
     try {
-      
-      signIn("credentials", {
+
+      const result = await signIn("credentials", {
         email: values.email,
-        password: values.password
+        password: values.password,
+        redirect: false,
       });
 
-      console.log("Login attempt:", values);
+      console.log("Login attempt result:", result);
 
-      toast({
-        title: "Login successful!",
-        description: "Welcome back to Brain Wave.",
-      });
-
-      router.push("/dashboard/profile"); // Redirect to dashboard after successful login
-      // Don't reset form after successful login as user is navigating away
+      if (result?.error) {
+        setError(result.error);
+        toast.error("Login failed. Please try again.");
+      } else if (result?.ok) {
+        toast.success("Login successful!");
+        router.push("/dashboard/profile");
+      }
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Invalid email or password. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Login error:", error);
+      toast.error("An unexpected error occurred. Please try again.");
+      setError("An unexpected error occurred");
+    } finally {
       setIsSubmitting(false);
     }
   };

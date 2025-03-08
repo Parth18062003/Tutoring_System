@@ -6,6 +6,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     
+    console.log("Sign up request body:", body);
     // Validate the request body
     const validatedData = signUpSchema.parse(body);
     
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const name = validatedData.firstName + " " + validatedData.lastName;
+    const name = validatedData.lastName ?  validatedData.firstName + " " + validatedData.lastName : validatedData.firstName;
     // Create the user
     const newUser = await prisma.user.create({
       data: {

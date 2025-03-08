@@ -4,12 +4,14 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { loginSchema } from "./schema";
-import { compareSync, genSaltSync, hashSync } from "bcrypt-ts";
-import { v4 as uuid } from "uuid";
-import { encode as defaultEncode } from "next-auth/jwt";
+import { compareSync } from "bcrypt-ts";
+import authConfig from "@/auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   adapter: PrismaAdapter(prisma),
+  session: { strategy: "jwt" },
+  ...authConfig,
   providers: [
     Google,
     Credentials({
@@ -21,7 +23,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const validatedCredentials = loginSchema.parse(credentials);
 
         // Find user by email (without checking password)
-        const user = await prisma.user.findUniqueOrThrow({
+        const user = await prisma.user.findUnique({
           where: { email: validatedCredentials.email },
         });
 
@@ -44,39 +46,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
+  
   callbacks: {
-    async jwt({ token, account }) {
-      if (account?.provider === "credentials") {
-        token.credentials = true;
+    jwt({ token, user }) {
+      if (user) {
+        // User is available during sign-in
+        token.id = user.id;
       }
       return token;
     },
-  },
-  jwt: {
-    encode: async function (params) {
-      if (params.token?.credentials) {
-        const sessionToken = uuid();
-
-        if (!params.token.sub) {
-          throw new Error("No user ID found in token");
-        }
-
-        const createdSession = await PrismaAdapter(prisma)?.createSession?.({
-          sessionToken: sessionToken,
-          userId: params.token.sub,
-          expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        });
-
-        if (!createdSession) {
-          throw new Error("Failed to create session");
-        }
-
-        return sessionToken;
-      }
-      return defaultEncode(params);
+    authorized: async ({ auth }) => {
+      // Logged in users are authenticated, otherwise redirect to login page
+      return !!auth
     },
   },
   pages: {
     signIn: "/authentication/sign-in",
-  }
+  },
 });

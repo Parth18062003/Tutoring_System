@@ -18,14 +18,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import GoogleOauth from "./google-oauth";
 import { signUpSchema } from "@/lib/schema";
-import { signIn } from "next-auth/react";
 import { genSaltSync, hashSync } from "bcrypt-ts";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 // Type for the form values based on the schema
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -53,7 +52,7 @@ export function SignUpForm({
   const onSubmit = async (values: SignUpFormValues) => {
     setIsSubmitting(true);
     try {
-      const salt = genSaltSync(12)
+      const salt = genSaltSync(12);
       const hashedpassword = hashSync(values.password, salt);
       const name = values.firstName + " " + values.lastName;
 
@@ -63,29 +62,29 @@ export function SignUpForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          firstName: values.firstName,
           email: values.email,
           password: hashedpassword,
           name: name,
         }),
       });
-  
+
       const data = await response.json();
       console.log("Form submitted:", data);
 
-      toast({
-        title: "Account created successfully!",
-        description: `Welcome, ${values.firstName}! Your account has been created.`,
-      });
+      if (response.status === 201) {
+        toast.success("Account created successfully!");
+        router.push("/authentication/sign-in");
+      } else if (response.status === 409) {
+        toast.error("User with this email already exists.");
+      } else {
+        toast.error("Something went wrong. Please try again later.");
+      }
 
       // Reset form after submission
       form.reset();
-      router.push("/dashboard/profile");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again later.",
-        variant: "destructive",
-      });
+      toast.error("Something went wrong. Please try again later.");
     } finally {
       setIsSubmitting(false);
     }
@@ -239,7 +238,35 @@ export function SignUpForm({
                     className="w-full"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Signing up..." : "Sign Up"}
+                    {isSubmitting ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex items-center gap-2"
+                      >
+                        <svg
+                          className="h-4 w-4 animate-spin"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        <span>Signing Up...</span>
+                      </motion.div>
+                    ) : (
+                      "Sign Up"
+                    )}
                   </Button>
 
                   <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">

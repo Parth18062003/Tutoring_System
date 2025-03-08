@@ -3,14 +3,14 @@ import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 
 const RlVisualization = () => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [animationKey, setAnimationKey] = useState(0);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [animationKey, setAnimationKey] = useState<number>(0);
   
   // Reset animation when hover state changes
   useEffect(() => {
     if (isHovered) {
       setAnimationKey(prev => prev + 1);
-    }
+    } setAnimationKey(0);
   }, [isHovered]);
   
   return (

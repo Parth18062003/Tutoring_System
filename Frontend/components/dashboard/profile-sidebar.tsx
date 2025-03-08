@@ -84,12 +84,10 @@ const navItems = [
 export default function ProfileSidebar() {
   const pathname = usePathname();
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const router = useRouter();
   const { data } = useSession()
   // Function to trigger sign out
   const handleSignOut = () => {
-    signOut(); 
-    router.push("/authentication/sign-in"); // Redirect to sign in page after sign out
+    signOut({redirectTo: "/authentication/sign-in"}); // Sign out and redirect to login page
     setIsDialogOpen(false); // Close the dialog after sign out
   };
 
@@ -167,12 +165,12 @@ export default function ProfileSidebar() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDialogOpen(false)} className="bg-[#DFE2FE] hover:bg-[#838ff8]">
+            <AlertDialogCancel onClick={() => setIsDialogOpen(false)} className="text-white bg-[#7874F2] hover:bg-[#8E98F5] hover:text-white transition-colors duration-200">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleSignOut} // Call sign out after confirmation
-              className="text-white bg-[#7874F2] hover:bg-[#b3bbff]"
+              className="bg-[#8E98F5] hover:bg-[#7874F2] transition-colors duration-200"
             >
               Logout
             </AlertDialogAction>
