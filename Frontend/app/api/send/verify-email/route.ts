@@ -1,4 +1,4 @@
-import { EmailTemplate } from "@/components/email-template";
+import VerifyEmail from "@/components/email/verify-email-token";
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 
@@ -8,19 +8,12 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { title, message }: { title: string; message: string } = body;
 
-  if (!message || !title) {
-    return NextResponse.json(
-      { error: "Missing required fields" },
-      { status: 400 }
-    );
-  }
-
   try {
     const { data, error } = await resend.emails.send({
       from: "Acme <onboarding@resend.dev>",
-      to: "2021.parth.kadam@ves.ac.in",
-      subject: "Welcome to Acme!",
-      react: EmailTemplate({ title, message }),
+      to: ["2021.parth.kadam@ves.ac.in"],
+      subject: "Verify your email",
+      react: VerifyEmail({ title, message }),
     });
 
     if (error) {

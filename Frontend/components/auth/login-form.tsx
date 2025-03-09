@@ -25,6 +25,7 @@ import { loginSchema } from "@/lib/schema";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import SubmitButton from "../ui/submit-button";
 
 // Type for the form values based on the schema
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -168,21 +169,19 @@ export function LoginForm({
                       <FormItem>
                         <div className="flex items-center">
                           <FormLabel>Password</FormLabel>
-                          <motion.a
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.98 }}
-                            href="#"
+                          <Link
+                            href="/authentication/forgot-password"
                             className="ml-auto text-sm text-primary underline-offset-2 hover:underline"
                           >
                             Forgot your password?
-                          </motion.a>
+                          </Link>
                         </div>
                         <div className="relative">
                           <FormControl>
                             <Input
                               type={showPassword ? "text" : "password"}
                               {...field}
-                              className="pr-16" // Add padding to prevent text from going under the button
+                              className="pr-16"
                               placeholder={
                                 !showPassword
                                   ? "●●●●●●●●"
@@ -221,43 +220,13 @@ export function LoginForm({
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
                 >
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isSubmitting}
+                  <SubmitButton
+                    isSubmitting={isSubmitting}
+                    text="Logging in..."
                   >
-                    {isSubmitting ? (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="flex items-center gap-2"
-                      >
-                        <svg
-                          className="h-4 w-4 animate-spin"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        <span>Logging in...</span>
-                      </motion.div>
-                    ) : (
-                      "Login"
-                    )}
-                  </Button>
+                    Log in
+                  </SubmitButton>
                 </motion.div>
-
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -337,7 +306,7 @@ export function LoginForm({
           </div>
           <div className="relative hidden bg-muted md:block">
             <DotLottieReact
-              src="https://lottie.host/e5c9556a-2337-4afa-8ccc-04477d7ec9e9/sGbA7pGgq0.lottie"
+              src="https://lottie.host/afdf6ad4-cf28-4734-9275-4ae464b786af/vvUR7hTBwV.lottie"
               loop
               autoplay
             />

@@ -79,13 +79,25 @@ export const auth = betterAuth({
     emailAndPassword: {
       enabled: true,
       //requireEmailVerification: true,
+      sendResetPassword: async ({ user, url }) => {
+        await fetch(`${process.env.BETTER_AUTH_URL}/api/send/reset-password`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title : "Reset your password",
+            magicLink: {url},
+          }),
+        });
+      },
     },
-/*     emailVerification: {
+    emailVerification: {
       sendOnSignUp: true,
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, token }) => {
         const verificationUrl = `${process.env.BETTER_AUTH_URL}/api/auth/verify-email?token=${token}&callbackURL=${process.env.BETTER_AUTH_URL}/dashboard/profile`;
-        await fetch(`${process.env.BETTER_AUTH_URL}/api/send`, {
+        await fetch(`${process.env.BETTER_AUTH_URL}/api/send/verify-email`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -96,7 +108,7 @@ export const auth = betterAuth({
           }),
         });
       },
-    }, */
+    },
     socialProviders: { 
       google: { 
        clientId: process.env.GOOGLE_CLIENT_ID as string, 

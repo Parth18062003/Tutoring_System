@@ -22,12 +22,11 @@ import Link from "next/link";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import GoogleOauth from "./google-oauth";
 import { signUpSchema } from "@/lib/schema";
-import { genSaltSync, hashSync } from "bcrypt-ts";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import SubmitButton from "../ui/submit-button";
 
-// Type for the form values based on the schema
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 export function SignUpForm({
@@ -53,8 +52,6 @@ export function SignUpForm({
   const onSubmit = async (values: SignUpFormValues) => {
     setIsSubmitting(true);
     try {
-      const salt = genSaltSync(12);
-      const hashedpassword = hashSync(values.password, salt);
       const name = values.firstName + " " + values.lastName;
 
       await authClient.signUp.email(
@@ -77,32 +74,6 @@ export function SignUpForm({
         }
       );
 
-      /*       const response = await fetch("/api/auth/sign-up", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firstName: values.firstName,
-          email: values.email,
-          password: hashedpassword,
-          name: name,
-        }),
-      });
-
-      const data = await response.json();
-      console.log("Form submitted:", data);
-
-      if (response.status === 201) {
-        toast.success("Account created successfully!");
-        router.push("/authentication/sign-in");
-      } else if (response.status === 409) {
-        toast.error("User with this email already exists.");
-      } else {
-        toast.error("Something went wrong. Please try again later.");
-      } */
-
-      // Reset form after submission
       form.reset();
     } catch (error) {
       toast.error("Something went wrong. Please try again later.");
@@ -150,7 +121,7 @@ export function SignUpForm({
                     </motion.p>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2 space-y-3">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
                       name="firstName"
@@ -205,23 +176,14 @@ export function SignUpForm({
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <div className="flex items-center">
-                          <FormLabel>Password</FormLabel>
-                          <motion.a
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.98 }}
-                            href="#"
-                            className="ml-auto text-sm text-primary underline-offset-2 hover:underline"
-                          >
-                            Forgot your password?
-                          </motion.a>
-                        </div>
+                        <FormLabel>Password</FormLabel>
+
                         <div className="relative">
                           <FormControl>
                             <Input
                               type={showPassword ? "text" : "password"}
                               {...field}
-                              className="pr-16" // Add padding to prevent text from going under the button
+                              className="pr-16" 
                               placeholder={
                                 !showPassword
                                   ? "●●●●●●●●"
@@ -254,41 +216,12 @@ export function SignUpForm({
                     )}
                   />
 
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isSubmitting}
+                  <SubmitButton
+                    isSubmitting={isSubmitting}
+                    text="Signing up..."
                   >
-                    {isSubmitting ? (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="flex items-center gap-2"
-                      >
-                        <svg
-                          className="h-4 w-4 animate-spin"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        <span>Signing Up...</span>
-                      </motion.div>
-                    ) : (
-                      "Sign Up"
-                    )}
-                  </Button>
+                    Sign Up
+                  </SubmitButton>
 
                   <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
                     <span className="relative z-10 bg-background px-2 text-muted-foreground">
@@ -382,7 +315,7 @@ export function SignUpForm({
             </div>
             <div className="relative hidden bg-muted md:block">
               <DotLottieReact
-                src="https://lottie.host/2124abfd-0e1e-463b-b34e-fa7b92b0e7ec/E9YTsVP3eD.lottie"
+                src="https://lottie.host/5ba86fdd-16e0-40d2-879e-b40d7ebba9d9/GqfjOGC2uJ.lottie"
                 loop
                 autoplay
               />
