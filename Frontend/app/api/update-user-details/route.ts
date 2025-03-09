@@ -2,24 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { personalInfoSchema } from "@/lib/schema";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { useSession } from "next-auth/react";
+import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-/* // Create a rate limiter instance
+// Create a rate limiter instance
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
   limiter: Ratelimit.slidingWindow(5, "60 s"),
   analytics: true,
   prefix: "@upstash/ratelimit-personal-info",
-}); */
+});
 
 enum Gender {
-    MALE,
-    FEMALE,
-    NONBINARY,
-    OTHER,
+  MALE,
+  FEMALE,
+  NONBINARY,
+  OTHER,
 }
 
 // Helper function to convert enum gender to string
@@ -52,22 +52,21 @@ function parsePhoneNumber(phone: string | undefined): number | undefined {
 export async function GET(request: NextRequest) {
   try {
     // Get the current user session using auth()
-    
-    const session = await auth()
-console.log("session",session)
+
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    console.log("session", session);
     // Check if the session exists
     if (!session?.user || !session.user.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Apply rate limiting
-    const userId = session.user.id;
-    //const { success } = await ratelimit.limit(`personal_info_get_${userId}`);
+    /*     const userId = session.user.id;
+    const { success } = await ratelimit.limit(`personal_info_get_${userId}`);
 
-/*     if (!success) {
+     if (!success) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }
@@ -75,18 +74,15 @@ console.log("session",session)
     } */
 
     // Fetch the user's information from the database
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: {
         email: session.user.email,
       },
     });
 
-    console.log("user",user);
+    console.log("user", user);
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Return the user data (excluding sensitive fields)
@@ -97,11 +93,11 @@ console.log("session",session)
         name: user.name,
         email: user.email,
         fullName: user.name,
-        displayName: user.name, // Since there's no separate display name field
+        displayName: user.name,
         bio: user.bio,
         dob: user.dob,
         location: user.address,
-        phoneNumber: user.phone?.toString(),
+        phoneNumber: user.phone,
         school: user.school,
         grade: user.grade,
       },
@@ -118,37 +114,36 @@ console.log("session",session)
 export async function PUT(request: NextRequest) {
   try {
     // Get the current user session using auth()
-    const session = await auth();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
-    console.log("session",session?.user);
+    console.log("session", session?.user);
     // Check if the session exists
     if (!session?.user || !session.user.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Apply rate limiting
-    const userId = session.user.id;
-/*     const { success } = await ratelimit.limit(`personal_info_put_${userId}`);
+    /*     const userId = session.user.id;
+     const { success } = await ratelimit.limit(`personal_info_put_${userId}`);
 
     if (!success) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }
       );
-    } */
+    }  */
 
     // Parse and validate the request body
     const body = await request.json();
-    
+
     try {
       const validatedData = personalInfoSchema.parse(body);
-      
+
       // Log validation success
-      console.log(`[${new Date().toISOString()}] User ${session.user.name} (${userId}) submitted valid personal info form`);
-      
+      // console.log(`[${new Date().toISOString()}] User ${session.user.name} (${userId}) submitted valid personal info form`);
+
       // Update user information in the database
       const updatedUser = await prisma.user.update({
         where: {
@@ -184,8 +179,8 @@ export async function PUT(request: NextRequest) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Log validation error details
-        console.error(`[${new Date().toISOString()}] Form validation error for user ${userId}:`, error.errors);
-        
+        //console.error(`[${new Date().toISOString()}] Form validation error for user ${userId}:`, error.errors);
+
         return NextResponse.json(
           { error: "Validation error", details: error.errors },
           { status: 400 }

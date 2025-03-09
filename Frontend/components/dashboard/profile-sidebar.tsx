@@ -29,9 +29,19 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "../ui/sidebar"; // Assuming these components exist and are styled appropriately
-import { signOut, useSession } from "next-auth/react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
+} from "../ui/sidebar"; 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
+import { authClient } from "@/lib/auth-client";
 
 const navItems = [
   {
@@ -84,14 +94,25 @@ const navItems = [
 export default function ProfileSidebar() {
   const pathname = usePathname();
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const { data } = useSession()
-  // Function to trigger sign out
-  const handleSignOut = () => {
-    signOut({redirectTo: "/authentication/sign-in"}); // Sign out and redirect to login page
-    setIsDialogOpen(false); // Close the dialog after sign out
-  };
+  const router = useRouter();
+  const { data: session } = authClient.useSession()
+  
+  const handleSignOut = async () => {
+		try {
+			await authClient.signOut({
+				fetchOptions: {
+					onSuccess: () => {
+						router.push("/authentication/sign-in");
+					},
+				},
+			});
+		} catch (error) {
+			console.error("Error signing out:", error);
+		} finally {
+			setIsDialogOpen(false);
+		}
+	};
 
-  console.log("data",data);
   return (
     <Sidebar className="w-64 border-r">
       <SidebarContent className="pt-6">
@@ -139,7 +160,9 @@ export default function ProfileSidebar() {
             <div className="font-medium text-base text-[#7874F2] mb-2">
               Logged in as
             </div>
-            <div className="text-gray-800 font-semibold">{data?.user?.name}</div>
+            <div className="text-gray-800 font-semibold">
+              {session?.user?.name}
+            </div>
             <div className="mt-2 text-gray-600 text-xs">
               Last login: 2 days ago
             </div>
@@ -153,7 +176,7 @@ export default function ProfileSidebar() {
           </Button>
         </div>
       </SidebarFooter>
-      
+
       {/* AlertDialog for confirmation */}
       <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <AlertDialogTrigger />
@@ -161,11 +184,15 @@ export default function ProfileSidebar() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. You will be logged out and redirected.
+              This action cannot be undone. You will be logged out and
+              redirected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDialogOpen(false)} className="text-white bg-[#7874F2] hover:bg-[#8E98F5] hover:text-white transition-colors duration-200">
+            <AlertDialogCancel
+              onClick={() => setIsDialogOpen(false)}
+              className="text-white bg-[#7874F2] hover:bg-[#8E98F5] hover:text-white transition-colors duration-200"
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

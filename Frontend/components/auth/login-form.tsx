@@ -22,9 +22,9 @@ import Link from "next/link";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import GoogleOauth from "./google-oauth";
 import { loginSchema } from "@/lib/schema";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
 // Type for the form values based on the schema
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -50,10 +50,32 @@ export function LoginForm({
   const onSubmit = async (values: LoginFormValues) => {
     setIsSubmitting(true);
     setError(null);
-    
-    try {
 
-      const result = await signIn("credentials", {
+    try {
+      await authClient.signIn.email(
+        {
+          email: values.email,
+          password: values.password,
+        },
+        {
+          onRequest: () => {
+            setIsSubmitting(true);
+          },
+          onSuccess: () => {
+            console.log("Login successful!");
+            setIsSubmitting(false);
+            toast.success("Login successful!");
+            router.push("/dashboard/profile");
+          },
+          onError: (error) => {
+            setIsSubmitting(false);
+            console.error("Login error:", error);
+            toast.error("Login failed. Please try again.");
+            setError("Login failed. Please try again.");
+          },
+        }
+      );
+      /*       const result = await signIn("credentials", {
         email: values.email,
         password: values.password,
         redirect: false,
@@ -67,7 +89,7 @@ export function LoginForm({
       } else if (result?.ok) {
         toast.success("Login successful!");
         router.push("/dashboard/profile");
-      }
+      } */
     } catch (error) {
       console.error("Login error:", error);
       toast.error("An unexpected error occurred. Please try again.");

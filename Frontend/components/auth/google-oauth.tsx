@@ -1,15 +1,37 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
+import { authClient } from "@/lib/auth-client";
 
 export default function GoogleOauth() {
+  const router = useRouter();
+  const googleLogin = async () => {
+    await authClient.signIn.social(
+      {
+        provider: "google",
+      },
+      {
+        onRequest: () => {
+          console.log("Requesting Google OAuth");
+        },
+        onSuccess: () => {
+          router.push("/dashboard/profile");
+          console.log("Successfully signed in with Google");
+        },
+        onError: (error) => {
+          console.error("Error signing in with Google:", error);
+        },
+      }
+    );
+  };
   return (
     <Button
       variant="outline"
       className="w-full z-10"
       type="button"
-      onClick={() => signIn("google", { callbackUrl: "/dashboard/profile" })}
+      /* onClick={() => signIn("google", { callbackUrl: "/dashboard/profile" })} */
+      onClick={() => googleLogin()}
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <path

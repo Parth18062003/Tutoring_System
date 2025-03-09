@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mail, MapPin, Calendar, Upload } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useSession } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
 
 interface ProfileCardProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function ProfileCard({ className, ...props }: ProfileCardProps) {
   const [uploading, setUploading] = useState(false);
-   const { data } = useSession()
-  const currentUser = data?.user?.name || "User";
+  const { data: session } = authClient.useSession()
+  const currentUser = session?.user.name || "User";
   const currentDate = new Date().toLocaleDateString();
 
   const handleImageUpload = () => {
@@ -31,7 +31,7 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
           <div className="flex flex-col items-center">
             <div className="relative group">
               <Avatar className="h-28 w-28 border-4 border-background">
-                <AvatarImage src={data?.user?.image || ''} alt={currentUser} />
+                <AvatarImage src={session?.user?.image || 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y2F0fGVufDB8fDB8fHww'} alt={currentUser} />
                 <AvatarFallback className="bg-[#7091e6]/10 text-[#7091e6] text-xl">
                   P
                 </AvatarFallback>
@@ -75,7 +75,7 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
             <div className="w-full space-y-3">
               <div className="flex items-center">
                 <Mail className="h-4 w-4 text-muted-foreground mr-3" />
-                <p className="text-sm">{data?.user?.email}</p>
+                <p className="text-sm">{session?.user?.email}</p>
               </div>
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 text-muted-foreground mr-3" />

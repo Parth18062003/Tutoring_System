@@ -1,4 +1,4 @@
-/* import authConfig from "./auth.config";
+/* /* import authConfig from "./auth.config";
 import NextAuth from "next-auth";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -55,7 +55,7 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
- */
+ 
 import { NextRequest } from "next/server"
 import authConfig from "./auth.config"
 import NextAuth from "next-auth"
@@ -69,4 +69,4 @@ const { auth } = NextAuth(authConfig)
 export default auth(async function middleware(req: NextRequest) {
   // Your custom middleware logic goes here
   
-})
+}) */

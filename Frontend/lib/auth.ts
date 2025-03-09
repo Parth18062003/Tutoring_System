@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+/* import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -63,4 +63,44 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/authentication/sign-in",
   },
+});
+*/
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { PrismaClient } from "@prisma/client";
+import { openAPI } from "better-auth/plugins";
+ 
+const prisma = new PrismaClient();
+export const auth = betterAuth({
+    database: prismaAdapter(prisma, {
+        provider: "postgresql", // or "mysql", "postgresql", ...etc
+    }),
+    plugins: [openAPI()],
+    emailAndPassword: {
+      enabled: true,
+      //requireEmailVerification: true,
+    },
+/*     emailVerification: {
+      sendOnSignUp: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: async ({ user, token }) => {
+        const verificationUrl = `${process.env.BETTER_AUTH_URL}/api/auth/verify-email?token=${token}&callbackURL=${process.env.BETTER_AUTH_URL}/dashboard/profile`;
+        await fetch(`${process.env.BETTER_AUTH_URL}/api/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title : "Verify your email",
+            magicLink: {verificationUrl},
+          }),
+        });
+      },
+    }, */
+    socialProviders: { 
+      google: { 
+       clientId: process.env.GOOGLE_CLIENT_ID as string, 
+       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string, 
+      } 
+   },
 });

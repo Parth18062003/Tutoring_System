@@ -25,6 +25,7 @@ import { signUpSchema } from "@/lib/schema";
 import { genSaltSync, hashSync } from "bcrypt-ts";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
 // Type for the form values based on the schema
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -56,7 +57,27 @@ export function SignUpForm({
       const hashedpassword = hashSync(values.password, salt);
       const name = values.firstName + " " + values.lastName;
 
-      const response = await fetch("/api/auth/sign-up", {
+      await authClient.signUp.email(
+        {
+          email: values.email,
+          password: values.password,
+          name: name,
+        },
+        {
+          onRequest: () => {
+            setIsSubmitting(true);
+          },
+          onSuccess: () => {
+            toast.success("Account created successfully!");
+            router.push("/authentication/sign-in");
+          },
+          onError: (error) => {
+            toast.error("Something went wrong. Please try again later.");
+          },
+        }
+      );
+
+      /*       const response = await fetch("/api/auth/sign-up", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,7 +100,7 @@ export function SignUpForm({
         toast.error("User with this email already exists.");
       } else {
         toast.error("Something went wrong. Please try again later.");
-      }
+      } */
 
       // Reset form after submission
       form.reset();

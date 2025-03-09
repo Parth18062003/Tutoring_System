@@ -1,4 +1,4 @@
-"use client";
+"use server"
 
 import React from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
@@ -10,8 +10,13 @@ import { AccountSettings } from "@/components/Profile/account-settings";
 import { AppearanceSettings } from "@/components/Profile/appearance-settings";
 import { NotificationPreferences } from "@/components/Profile/notification-preference";
 import { ConnectedAccounts } from "@/components/Profile/connected-accounts";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  const session = await auth.api.getSession({
+    headers: await headers()
+  })
   return (
     <DashboardShell>
       <DashboardHeader

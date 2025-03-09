@@ -122,7 +122,7 @@ export function PersonalInformation() {
     }
   };
 
-  useEffect(() => {
+   useEffect(() => {
     // Fetch the user's personal information
     const fetchUserData = async () => {
       try {
@@ -192,7 +192,7 @@ export function PersonalInformation() {
     };
 
     fetchUserData();
-  }, [form]);
+  }, [form]); 
 
   async function onSubmit(data: z.infer<typeof personalInfoSchema>) {
     try {
