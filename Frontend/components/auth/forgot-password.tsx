@@ -32,7 +32,7 @@ const ForgotPassword = () => {
     setIsPending(true);
     const { error } = await authClient.forgetPassword({
       email: data.email,
-      redirectTo: "/reset-password",
+      redirectTo: "/authentication/reset-password",
     });
 
     if (error) {

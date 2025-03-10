@@ -1,72 +1,105 @@
-/* /* import authConfig from "./auth.config";
-import NextAuth from "next-auth";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
-import {
-  type NextFetchEvent,
-  type NextRequest,
-  NextResponse,
-} from "next/server";
-import { ipAddress } from "@vercel/functions";
+import { betterFetch } from "@better-fetch/fetch";
+import { NextResponse, type NextRequest } from "next/server";
+import { Session } from "@/lib/auth";
 
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.fixedWindow(2, "10s"),
-  ephemeralCache: new Map(),
-  prefix: "@upstash/ratelimit",
-  analytics: true,
-});
+const authRoutes = ["/authentication/sign-in", "/authentication/sign-up"];
+const passwordRoutes = ["/authentication/reset-password", "/authentication/forgot-password"];
+const adminRoutes = ["/admin"];
 
-const { auth } = NextAuth(authConfig);
-export default auth(async function middleware(request) {
-  if (!request.auth && request.nextUrl.pathname !== "/authentication/sign-in") {
-    const newUrl = new URL("/authentication/sign-in", request.nextUrl.origin);
-    return Response.redirect(newUrl);
-  }
+export default async function authMiddleware(request: NextRequest) {
+  const pathName = request.nextUrl.pathname;
+  const isAuthRoute = authRoutes.includes(pathName);
+  const isPasswordRoute = passwordRoutes.includes(pathName);
+  const isAdminRoute = adminRoutes.includes(pathName);
 
-  const req = request as NextRequest;
-  const path = req.nextUrl.pathname;
-  if (path.startsWith("/api/auth") || path.startsWith("/authentication")) {
-    const ip = ipAddress(req) ?? "127.0.0.1";
-    const { success, limit, remaining } = await ratelimit.limit(ip);
+	const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
+		baseURL: request.nextUrl.origin,
+		headers: {
+			cookie: request.headers.get("cookie") || "", // Forward the cookies from the request
+		},
+	});
 
-    const res = success
-      ? NextResponse.next()
-      : NextResponse.redirect(new URL("/api/blocked", request.url));
-    if (!success) {
-      res.headers.set("X-RateLimit-Success", success.toString());
-      res.headers.set("X-RateLimit-Limit", limit.toString());
-      res.headers.set("X-RateLimit-Remaining", remaining.toString());
-      
-      return NextResponse.redirect(new URL("/api/blocked", request.url));
-
+  if (!session) {
+    if (isAuthRoute || isPasswordRoute) {
+      return NextResponse.next();
     }
+    return NextResponse.redirect(new URL("/authentication/sign-in", request.url));
   }
+
+  if (isAuthRoute || isPasswordRoute) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  if (isAdminRoute && session.user.role !== "admin") {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   return NextResponse.next();
-});
+}
+
+export const config = {
+  matcher: ['/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)'],
+};
+/* import { betterFetch } from "@better-fetch/fetch";
+import { NextResponse, type NextRequest } from "next/server";
+import { Session } from "@/lib/auth";
+
+const PUBLIC_ROUTES = [
+  "/",
+  "/authentication/sign-in",
+  "/authentication/sign-up",
+  "/authentication/reset-password",
+  "/authentication/forgot-password",
+];
+
+const ADMIN_ROUTES = ["/admin"];
+
+export default async function authMiddleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  const isPublicRoute = PUBLIC_ROUTES.includes(path);
+  const isAdminRoute = ADMIN_ROUTES.includes(path);
+
+  const { data: session } = await betterFetch<Session>(
+    "/api/auth/get-session",
+    {
+      baseURL: process.env.BETTER_AUTH_URL,
+      headers: { cookie: request.headers.get("cookie") || "" },
+    }
+  );
+
+  console.log("Session:", session);
+    
+  try {
+
+    if (isPublicRoute) {
+      // Redirect authenticated users from public routes
+      if (session) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+      
+      return NextResponse.next();
+    }
+
+    // Redirect to sign-in if unauthenticated
+    if (!session) {
+      return NextResponse.redirect(new URL("/authentication/sign-in", request.url));
+    }
+
+    // Admin route protection
+    if (isAdminRoute && session.user.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+  } catch (error) {
+    console.error("Authentication check failed:", error);
+    return NextResponse.redirect(new URL("/authentication/sign-in", request.url));
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
-    // Match all request paths except for the ones starting with:
-    // - api (API routes)
-    // - _next/static (static files)
-    // - _next/image (image optimization files)
-    // - favicon.ico (favicon file)
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
   ],
-};
- 
-import { NextRequest } from "next/server"
-import authConfig from "./auth.config"
-import NextAuth from "next-auth"
- 
-// Use only one of the two middleware options below
-// 1. Use middleware directly
-// export const { auth: middleware } = NextAuth(authConfig)
- 
-// 2. Wrapped middleware option
-const { auth } = NextAuth(authConfig)
-export default auth(async function middleware(req: NextRequest) {
-  // Your custom middleware logic goes here
-  
-}) */
+}; */

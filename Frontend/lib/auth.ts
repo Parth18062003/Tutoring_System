@@ -1,118 +1,62 @@
-/* import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
-import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "./prisma";
-import { loginSchema } from "./schema";
-import { compareSync } from "bcrypt-ts";
-import authConfig from "@/auth.config";
-
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  secret: process.env.AUTH_SECRET,
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  ...authConfig,
-  providers: [
-    Google,
-    Credentials({
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      authorize: async (credentials) => {
-        const validatedCredentials = loginSchema.parse(credentials);
-
-        // Find user by email (without checking password)
-        const user = await prisma.user.findUnique({
-          where: { email: validatedCredentials.email },
-        });
-
-        if (!user) {
-          return null; // Return null for invalid credentials
-        }
-
-        // Compare provided password with stored hash
-        const passwordValid = await compareSync(
-          validatedCredentials.password,
-          user?.password || ""
-        );
-
-        if (!passwordValid) {
-          return null; // Return null for invalid password
-        }
-
-        console.log("User authenticated", user);
-        return user; // Valid credentials
-      },
-    }),
-  ],
-  
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        // User is available during sign-in
-        token.id = user.id;
-      }
-      return token;
-    },
-    authorized: async ({ auth }) => {
-      // Logged in users are authenticated, otherwise redirect to login page
-      return !!auth
-    },
-  },
-  pages: {
-    signIn: "/authentication/sign-in",
-  },
-});
-*/
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { PrismaClient } from "@prisma/client";
-import { openAPI } from "better-auth/plugins";
- 
+import { admin, openAPI } from "better-auth/plugins";
+import { sendResetPasswordEmail } from "@/components/email/reset-password-link";
+import { resend } from "./resend";
+import { sendVerifyEmail } from "@/components/email/verify-email-token";
+
 const prisma = new PrismaClient();
 export const auth = betterAuth({
-    database: prismaAdapter(prisma, {
-        provider: "postgresql", // or "mysql", "postgresql", ...etc
-    }),
-    plugins: [openAPI()],
-    emailAndPassword: {
+  database: prismaAdapter(prisma, {
+    provider: "postgresql", 
+  }),
+  session: {
+    expiresIn: 60 * 60 * 24 * 30, // 30 days
+    updateAge: 60 * 60 * 24 * 7, // 7 days (every 7 days the session expiration is updated)
+    cookieCache: {
       enabled: true,
-      //requireEmailVerification: true,
-      sendResetPassword: async ({ user, url }) => {
-        await fetch(`${process.env.BETTER_AUTH_URL}/api/send/reset-password`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title : "Reset your password",
-            magicLink: {url},
-          }),
-        });
-      },
+      maxAge: 5 * 60 // Cache duration in seconds
+    }
+  },
+  plugins: [openAPI(), admin()],
+  emailAndPassword: {
+    enabled: true,
+    //requireEmailVerification: true,
+    async sendResetPassword({ user, url }) {
+      await resend.emails.send({
+        from: "Brain Wave <onboarding@resend.dev>",
+        to: ["2021.parth.kadam@ves.ac.in"],
+        subject: "Reset your password",
+        react: sendResetPasswordEmail({
+          title: "Reset your password",
+          magicLink: url,
+        }),
+      });
     },
-    emailVerification: {
-      sendOnSignUp: true,
-      autoSignInAfterVerification: true,
-      sendVerificationEmail: async ({ user, token }) => {
-        const verificationUrl = `${process.env.BETTER_AUTH_URL}/api/auth/verify-email?token=${token}&callbackURL=${process.env.BETTER_AUTH_URL}/dashboard/profile`;
-        await fetch(`${process.env.BETTER_AUTH_URL}/api/send/verify-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title : "Verify your email",
-            magicLink: {verificationUrl},
-          }),
-        });
-      },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    async sendVerificationEmail({ user, token }) {
+      const verificationUrl = `${process.env.BETTER_AUTH_URL}/api/auth/verify-email?token=${token}&callbackURL=${process.env.BETTER_AUTH_URL}/dashboard/profile`;
+      await resend.emails.send({
+        from: "Brain Wave <onboarding@resend.dev>",
+        to: ["2021.parth.kadam@ves.ac.in"],
+        subject: "Verify your email",
+        react: sendVerifyEmail({
+          title: "Verify your email",
+          magicLink: verificationUrl,
+        }),
+      });
     },
-    socialProviders: { 
-      google: { 
-       clientId: process.env.GOOGLE_CLIENT_ID as string, 
-       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string, 
-      } 
-   },
+  },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
+  },
 });
+
+export type Session = typeof auth.$Infer.Session;

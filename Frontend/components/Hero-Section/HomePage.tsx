@@ -1,5 +1,3 @@
-"use client";
-
 import React, { Suspense } from "react";
 import { Header } from "../header";
 import Hero from "./Hero";
@@ -10,9 +8,9 @@ import Testimonials from "./Testimonial";
 import Faq from "./Faq";
 import CallToAction from "./Cta";
 import Footer from "../footer";
-import { ReactLenis, useLenis } from "lenis/react";
+import { ReactLenis } from "lenis/react";
 
-const HomePage = () => {
+const HomePage = async () => {
   return (
     <ReactLenis root>
       <div className="flex flex-col min-h-screen overflow-hidden">
