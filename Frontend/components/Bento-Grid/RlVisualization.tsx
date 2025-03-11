@@ -10,7 +10,7 @@ const RlVisualization = () => {
   useEffect(() => {
     if (isHovered) {
       setAnimationKey(prev => prev + 1);
-    } setAnimationKey(0);
+    } 
   }, [isHovered]);
   
   return (

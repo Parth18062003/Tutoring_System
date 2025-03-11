@@ -95,8 +95,9 @@ export default function Testimonials() {
                       <Image
                         src={testimonial.image}
                         alt={`${testimonial.name} portrait`}
-                        fill
-                        className="object-cover"
+                        width={48}
+                        height={48}
+                        className="fill object-cover"
                       />
                     </div>
                     <div>

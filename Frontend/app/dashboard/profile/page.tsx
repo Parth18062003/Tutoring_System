@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 import React from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
@@ -10,13 +10,8 @@ import { AccountSettings } from "@/components/Profile/account-settings";
 import { AppearanceSettings } from "@/components/Profile/appearance-settings";
 import { NotificationPreferences } from "@/components/Profile/notification-preference";
 import { ConnectedAccounts } from "@/components/Profile/connected-accounts";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 
 export default async function ProfilePage() {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  })
   return (
     <DashboardShell>
       <DashboardHeader
@@ -26,11 +21,11 @@ export default async function ProfilePage() {
         userImage="/avatars/parth.png"
         lastLogin="2025-03-07 16:57:26"
       />
-      
+
       <div className="grid gap-6 md:grid-cols-12 ">
         <ProfileCard className="md:col-span-4" />
-        
-        <div className="md:col-span-8">
+
+        <div className="md:col-span-8 mx-auto">
           <Tabs defaultValue="personal" className="w-full">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="personal">Personal</TabsTrigger>

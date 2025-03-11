@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BrainCircuit, ChevronDown, LineChart, Book, Target } from 'lucide-react';
+import { BrainCircuit, LineChart, Target, ArrowBigUpDash, Headset } from 'lucide-react';
 
 const Hero = () => {
   return (
@@ -82,9 +82,9 @@ const Hero = () => {
           >
             {[
               { value: "96%", label: "Student Satisfaction", icon: <Target className="w-5 h-5 text-[#7091e6]" /> },
-              { value: "3.2x", label: "Learning Speed", icon: <LineChart className="w-5 h-5 text-[#7091e6]" /> },
-              { value: "42%", label: "Test Score Improvement", icon: <Book className="w-5 h-5 text-[#7091e6]" /> },
-              { value: "24/7", label: "Learning Support", icon: <BrainCircuit className="w-5 h-5 text-[#7091e6]" /> },
+              { value: "3.2x", label: "Learning Speed", icon: <ArrowBigUpDash className="w-5 h-5 text-[#7091e6]" /> },
+              { value: "42%", label: "Test Score Improvement", icon: <LineChart className="w-5 h-5 text-[#7091e6]" /> },
+              { value: "24/7", label: "Learning Support", icon: <Headset className="w-5 h-5 text-[#7091e6]" /> },
             ].map((stat, i) => (
               <motion.div
                 key={i}

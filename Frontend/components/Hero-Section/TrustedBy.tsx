@@ -1,10 +1,10 @@
 import Image from 'next/image'
 import React from 'react'
-import edx from '../../public/edx.png'
-import coursera from '../../public/coursera.png'
-import udemy from '../../public/udemy.jpg'
-import khanacademy from '../../public/khanacademy.jpg'
-import physics_wallah from "../../public/physics_wallah.png"
+import edx from '../../public/edx.svg'
+import coursera from '../../public/coursera.svg'
+import udemy from '../../public/udemy.svg'
+import khanacademy from '../../public/khanacademy.svg'
+import physics_wallah from "../../public/physics_wallah.svg"
 
 const TrustedBy = () => {
   // Create an array of images and their alt text
@@ -53,7 +53,7 @@ const TrustedBy = () => {
                     alt={partner.alt}
                     width={100}
                     height={40}
-                    className="h-10 w-auto object-contain relative z-10 transition-all duration-300 filter grayscale group-hover:grayscale-0 group-hover:scale-105"
+                    className="h-14 w-auto object-contain relative z-10 transition-all duration-300 filter grayscale group-hover:grayscale-0 group-hover:scale-105"
                   />
                 </div>
               </div>

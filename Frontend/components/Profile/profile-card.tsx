@@ -26,14 +26,14 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
 
   return (
     <div className={cn(className)} {...props}>
-      <Card>
+      <Card >
         <CardContent className="p-6">
           <div className="flex flex-col items-center">
             <div className="relative group">
               <Avatar className="h-28 w-28 border-4 border-background">
                 <AvatarImage src={session?.user?.image || 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y2F0fGVufDB8fDB8fHww'} alt={currentUser} />
                 <AvatarFallback className="bg-[#7091e6]/10 text-[#7091e6] text-xl">
-                  P
+                  {currentUser[0]}
                 </AvatarFallback>
               </Avatar>
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
@@ -66,10 +66,6 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
               </Badge>
             </div>
             
-            <Button variant="outline" className="mt-4 w-full">
-              Edit Profile
-            </Button>
-            
             <div className="w-full border-t border-border my-6"></div>
             
             <div className="w-full space-y-3">
@@ -79,7 +75,7 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
               </div>
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 text-muted-foreground mr-3" />
-                <p className="text-sm">New Delhi, India</p>
+                <p className="text-sm">{session?.user.role}</p>
               </div>
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 text-muted-foreground mr-3" />
