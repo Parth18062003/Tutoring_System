@@ -62,15 +62,21 @@ export function LoginForm({
           onRequest: () => {
             setIsSubmitting(true);
           },
-          onSuccess: () => {
-            console.log("Login successful!");
+          async onSuccess(context) {
             setIsSubmitting(false);
-            toast.success("Login successful!");
-            router.push("/dashboard/profile");
+            if (context.data.twoFactorRedirect) {
+              // Handle the 2FA verification in place
+              const { data, error } = await authClient.twoFactor.sendOtp();
+              toast.success("Check your email for the OTP.");
+              router.push("/authentication/two-factor");
+            } else {
+              toast.success("Login successful!");
+              router.push("/dashboard/profile");
+            }
           },
-          onError: (error) => {
+          onError: (cxt) => {
             setIsSubmitting(false);
-            console.error("Login error:", error);
+            console.error("Login error:", cxt.error.message);
             toast.error("Login failed. Please try again.");
             setError("Login failed. Please try again.");
           },

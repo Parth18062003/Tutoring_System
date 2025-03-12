@@ -67,6 +67,13 @@ export const resetPasswordSchema = z.object({
     .regex(/[0-9]/, { message: "Password must contain at least one number" }),
 });
 
+export const twoFaFormSchema = z.object({
+  isEnabled: z.boolean(),
+  password: z
+    .string()
+    .min(8, { message: "Password must be at least 8 characters" })
+});
+
 type LoginSchema = z.infer<typeof loginSchema>;
 
 export { loginSchema, type LoginSchema };

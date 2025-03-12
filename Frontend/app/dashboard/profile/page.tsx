@@ -10,8 +10,14 @@ import { AccountSettings } from "@/components/Profile/account-settings";
 import { AppearanceSettings } from "@/components/Profile/appearance-settings";
 import { NotificationPreferences } from "@/components/Profile/notification-preference";
 import { ConnectedAccounts } from "@/components/Profile/connected-accounts";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export default async function ProfilePage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
   return (
     <DashboardShell>
       <DashboardHeader
@@ -38,7 +44,7 @@ export default async function ProfilePage() {
               <PersonalInformation />
             </TabsContent>
             <TabsContent value="account">
-              <AccountSettings />
+              <AccountSettings session={session}/>
             </TabsContent>
             <TabsContent value="appearance">
               <AppearanceSettings />

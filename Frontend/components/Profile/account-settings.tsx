@@ -12,6 +12,8 @@ import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
+import EnableTwoFactor from "../auth/enable-two-factor";
+import { Session } from "@/lib/auth";
 
 const emailFormSchema = z.object({
   email: z.string().email({
@@ -34,12 +36,11 @@ const passwordFormSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export function AccountSettings() {
+export function AccountSettings({ session }: { session: Session }) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const lastLogin = "2025-03-07 16:59:21";
-  
   const emailForm = useForm<z.infer<typeof emailFormSchema>>({
     resolver: zodResolver(emailFormSchema),
     defaultValues: {
@@ -220,15 +221,7 @@ export function AccountSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <h4 className="text-sm font-medium">Two-Factor Authentication (2FA)</h4>
-              <p className="text-sm text-muted-foreground">
-                Add an extra layer of security to your account.
-              </p>
-            </div>
-            <Switch />
-          </div>
+          <EnableTwoFactor session={session}/>
           
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">

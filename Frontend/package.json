@@ -41,6 +41,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "input-otp": "^1.4.2",
     "lenis": "^1.2.1",
     "lucide-react": "^0.476.0",
     "motion": "^12.4.7",

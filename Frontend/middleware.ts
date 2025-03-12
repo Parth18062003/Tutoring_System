@@ -3,13 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { Session } from "@/lib/auth";
 import { getSessionCookie } from "better-auth/cookies";
 
-const authRoutes = ["/authentication/sign-in", "/authentication/sign-up"];
+const authRoutes = ["/authentication/sign-in", "/authentication/sign-up", "/authentication/two-factor"];
 const passwordRoutes = [
   "/authentication/reset-password",
   "/authentication/forgot-password",
 ];
 const adminRoutes = ["/admin"];
-const publicRoutes = ["/"]
+const publicRoutes = ["/", ]
 
 export default async function middleware(request: NextRequest) {
   const pathName = request.nextUrl.pathname;
@@ -25,7 +25,7 @@ export default async function middleware(request: NextRequest) {
 		},
 	});  */
   const session = getSessionCookie(request);
-  console.log(session);
+  console.log("session",session);
   if (!session) {
     if (isAuthRoute || isPasswordRoute || isPublicRoute) {
       return NextResponse.next();

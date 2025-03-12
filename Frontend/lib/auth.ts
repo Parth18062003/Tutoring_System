@@ -5,21 +5,43 @@ import { admin, openAPI } from "better-auth/plugins";
 import { sendResetPasswordEmail } from "@/components/email/reset-password-link";
 import { resend } from "./resend";
 import { sendVerifyEmail } from "@/components/email/verify-email-token";
+import { twoFactor } from "better-auth/plugins";
+import { sendOtpMail } from "@/components/email/otp-mail";
 
 const prisma = new PrismaClient();
 export const auth = betterAuth({
+  appName: "Brain Wave",
   database: prismaAdapter(prisma, {
-    provider: "postgresql", 
+    provider: "postgresql",
   }),
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days
     updateAge: 60 * 60 * 24 * 7, // 7 days (every 7 days the session expiration is updated)
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60 // Cache duration in seconds
-    }
+      maxAge: 5 * 60, // Cache duration in seconds
+    },
   },
-  plugins: [openAPI(), admin()],
+  plugins: [
+    openAPI(),
+    admin(),
+    twoFactor({
+      skipVerificationOnEnable: true,
+      otpOptions: {
+        async sendOTP({ user, otp }, request) {
+          await resend.emails.send({
+            from: "Brain Wave <onboarding@resend.dev>",
+            to: ["2021.parth.kadam@ves.ac.in"],
+            subject: "OTP for two-factor authentication",
+            react: sendOtpMail({
+              title: "One Time Password",
+              code: otp,
+            }),
+          });
+        },
+      },
+    }),
+  ],
   emailAndPassword: {
     enabled: true,
     //requireEmailVerification: true,
