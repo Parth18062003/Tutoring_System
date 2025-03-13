@@ -18,16 +18,17 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { twoFaFormSchema } from "@/lib/schema";
+import { UserDashboardData } from "@/actions/user-actions";
 
 type TwoFaFormType = z.infer<typeof twoFaFormSchema>;
 
-const EnableTwoFactor = ({ session }: { session: Session }) => {
+const EnableTwoFactor = ({ session }: { session: UserDashboardData }) => {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<boolean | null>(null);
   const form = useForm<TwoFaFormType>({
     resolver: zodResolver(twoFaFormSchema),
     defaultValues: {
-      isEnabled: session?.user?.twoFactorEnabled || false,
+      isEnabled: session?.twoFactorEnabled || false,
       password: "",
     },
   });

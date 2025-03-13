@@ -1,5 +1,3 @@
-"use server";
-
 import React from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -10,26 +8,30 @@ import { AccountSettings } from "@/components/Profile/account-settings";
 import { AppearanceSettings } from "@/components/Profile/appearance-settings";
 import { NotificationPreferences } from "@/components/Profile/notification-preference";
 import { ConnectedAccounts } from "@/components/Profile/connected-accounts";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { Suspense } from "react";
+import { getUserData } from "@/actions/user-actions";
+
+// Loading state component
+function ProfileSkeleton() {
+  return <div className="animate-pulse">Loading profile data...</div>;
+}
 
 export default async function ProfilePage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
+  // Properly await the async function
+  const userData = await getUserData();
+  
   return (
     <DashboardShell>
       <DashboardHeader
         heading="User Profile"
         text="Manage your personal information and preferences."
-        userName="Parth18062003"
-        userImage="/avatars/parth.png"
-        lastLogin="2025-03-07 16:57:26"
+        userName={userData.name || "User"}
+        userImage={userData.image || "/avatars/default.png"}
+        lastLogin="2025-03-13 15:33:15" // Using the current date from your message
       />
 
-      <div className="grid gap-6 md:grid-cols-12 ">
-        <ProfileCard className="md:col-span-4" />
+      <div className="grid gap-6 md:grid-cols-12">
+        <ProfileCard className="md:col-span-4" session={userData} />
 
         <div className="md:col-span-8 mx-auto">
           <Tabs defaultValue="personal" className="w-full">
@@ -41,19 +43,29 @@ export default async function ProfilePage() {
               <TabsTrigger value="connections">Connections</TabsTrigger>
             </TabsList>
             <TabsContent value="personal">
-              <PersonalInformation />
+              <Suspense fallback={<ProfileSkeleton />}>
+                <PersonalInformation session={userData} />
+              </Suspense>
             </TabsContent>
             <TabsContent value="account">
-              <AccountSettings session={session}/>
+              <Suspense fallback={<ProfileSkeleton />}>
+                <AccountSettings session={userData} />
+              </Suspense>
             </TabsContent>
             <TabsContent value="appearance">
-              <AppearanceSettings />
+              <Suspense fallback={<ProfileSkeleton />}>
+                <AppearanceSettings />
+              </Suspense>
             </TabsContent>
             <TabsContent value="notifications">
-              <NotificationPreferences />
+              <Suspense fallback={<ProfileSkeleton />}>
+                <NotificationPreferences />
+              </Suspense>
             </TabsContent>
             <TabsContent value="connections">
-              <ConnectedAccounts />
+              <Suspense fallback={<ProfileSkeleton />}>
+                <ConnectedAccounts />
+              </Suspense>
             </TabsContent>
           </Tabs>
         </div>

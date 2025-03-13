@@ -42,22 +42,26 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CalendarIcon, Loader2, Pencil } from "lucide-react";
-import { format, set } from "date-fns";
+import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { toast } from "@/hooks/use-toast";
 import { personalInfoSchema } from "@/lib/schema";
 import classNames from "react-day-picker/style.module.css";
 import { DropdownNavProps, DropdownProps } from "react-day-picker";
-import { userData } from "@/lib/actions";
+import { updateUserData, UserDashboardData } from "@/actions/user-actions";
+import { toast } from "sonner";
 
 type UserDataType = z.infer<typeof personalInfoSchema>;
 
-export function PersonalInformation() {
+export function PersonalInformation({
+  session,
+}: {
+  session: UserDashboardData;
+}) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -68,15 +72,15 @@ export function PersonalInformation() {
   const form = useForm<UserDataType>({
     resolver: zodResolver(personalInfoSchema),
     defaultValues: {
-      fullName: "",
+      name: "",
       displayName: "",
       bio: "",
-      dateOfBirth: "",
+      dob: "",
       location: "",
-      phoneNumber: "",
+      phone: "",
       school: "",
       grade: "",
-      gender: "male",
+      gender: "prefer-not-to-say",
     },
   });
 
@@ -103,117 +107,65 @@ export function PersonalInformation() {
     current: UserDataType
   ): Partial<UserDataType> => {
     const changedFields: Partial<UserDataType> = {};
-    
+
     (Object.keys(current) as Array<keyof UserDataType>).forEach((key) => {
       if (original[key] !== current[key]) {
         changedFields[key] = current[key];
       }
     });
-    
+
     return changedFields;
   };
 
+  // Initialize form with session data
   useEffect(() => {
-    // Fetch the user's personal information
-    const fetchUserData = async () => {
+    if (session) {
+      setIsFetching(true);
+
       try {
-        setIsFetching(true);
-        const response = await fetch("/api/update-user-details");
-        const data = await response.json();
+        // Use the data directly from the session
+        const dob = session.dob || "2003-06-18";
 
-        if (data.success && data.user) {
-          // Format and set form data
-          const dateOfBirth = data.user.dateOfBirth || "2003-06-18";
-
-          const userData = {
-            fullName: data.user.fullName || data.user.name || "",
-            displayName: data.user.displayName || data.user.name || "",
-            bio: data.user.bio || "",
-            dateOfBirth: dateOfBirth,
-            location: data.user.location || "",
-            phoneNumber: data.user.phoneNumber || "",
-            school: data.user.school || "",
-            grade: data.user.grade || "",
-            gender: data.user.gender || "male",
-          };
-
-          // Store original data for comparison later
-          setOriginalData(userData);
-          form.reset(userData);
-
-          // Set the selected date for the calendar
-          setSelectedDate(parseStringToDate(dateOfBirth));
-        } else {
-          console.error("Failed to fetch user data:", data.error);
-          // If API call fails, use the default values
-          const defaultData = {
-            fullName: "Parth Sharma",
-            displayName: "Parth18062003",
-            bio: "Computer Science student passionate about AI and machine learning.",
-            dateOfBirth: "2003-06-18",
-            location: "New Delhi, India",
-            phoneNumber: "+91 98765 43210",
-            school: "St. Xavier's School",
-            grade: "12th",
-            gender: "male",
-          };
-
-          setOriginalData(defaultData);
-          form.reset(defaultData);
-
-          // Set the default selected date
-          setSelectedDate(parseStringToDate("2003-06-18"));
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        toast({
-          title: "Failed to load profile",
-          description:
-            "We couldn't load your profile data. Using default information instead.",
-          variant: "destructive",
-        });
-
-        // If fetch fails, use defaults
-        const defaultData = {
-          fullName: "Parth Sharma",
-          displayName: "Parth18062003",
-          bio: "Computer Science student passionate about AI and machine learning.",
-          dateOfBirth: "2003-06-18",
-          location: "New Delhi, India",
-          phoneNumber: "+91 98765 43210",
-          school: "St. Xavier's School",
-          grade: "12th",
-          gender: "male",
+        const formData: UserDataType = {
+          name: session.name || "Parth Sharma",
+          displayName: "Parth18062003", // You may want to add this to your UserDashboardData
+          bio:
+            session.bio ||
+            "Computer Science student passionate about AI and machine learning.",
+          dob: dob,
+          location: session.address || "New Delhi, India", // Using address field for location
+          phone: session.phone || "+91 98765 43210",
+          school: session.school || "St. Xavier's School",
+          grade: session.grade || "12th",
+          gender: session.gender || "male",
         };
 
-        setOriginalData(defaultData);
-        form.reset(defaultData);
+        setOriginalData(formData);
+        form.reset(formData);
 
-        // Set the default selected date
-        setSelectedDate(parseStringToDate("2003-06-18"));
+        // Set date for calendar
+        setSelectedDate(parseStringToDate(dob));
+      } catch (error) {
+        console.error("Error initializing form with session data:", error);
+        toast.error("Failed to load profile data.");
       } finally {
         setIsFetching(false);
       }
-    };
-
-    fetchUserData();
-  }, [form]);
+    }
+  }, [session, form]);
 
   async function onSubmit(data: UserDataType) {
     if (!originalData) return;
 
     try {
       setIsLoading(true);
-      
+
       // Get only the fields that have changed
       const changedFields = getChangedFields(originalData, data);
-      
+
       // If no fields changed, no need to make an API call
       if (Object.keys(changedFields).length === 0) {
-        toast({
-          title: "No changes detected",
-          description: "No changes were made to your profile.",
-        });
+        toast.info("No changes were made to your profile.");
         setEditMode(false);
         return;
       }
@@ -222,27 +174,24 @@ export function PersonalInformation() {
       const timestamp = new Date().toISOString();
       console.log(`[${timestamp}] Submitting changed fields:`, changedFields);
 
-      // Send only the updated fields to the API
-      const response = await fetch("/api/update-user-details", {
-        method: "PATCH", // Using PATCH instead of PUT for partial updates
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          changes: changedFields,
-        }),
-      });
+      // Map form fields to UserDashboardData fields
+      const updateData: Partial<UserDashboardData> = {
+        name: changedFields.name,
+        bio: changedFields.bio,
+        dob: changedFields.dob,
+        gender: changedFields.gender,
+        phone: changedFields.phone,
+        school: changedFields.school,
+        grade: changedFields.grade,
+        address: changedFields.location, // Map location to address
+      };
 
-      const result = await response.json();
+      // Use the server action to update user data
+      const result = await updateUserData(updateData);
 
-      if (!response.ok) {
+      if (!result.success) {
         console.error(`[${timestamp}] Form submission failed:`, result);
-
-        toast({
-          title: "Update failed",
-          description: result.error || "Failed to update personal information.",
-          variant: "destructive",
-        });
+        toast.error(result.error || "An unexpected error occurred.");
         return;
       }
 
@@ -250,21 +199,14 @@ export function PersonalInformation() {
 
       // Update the original data with the new values
       setOriginalData(data);
-      
-      toast({
-        title: "Personal information updated",
-        description: "Your profile has been successfully updated.",
-      });
-      
+
+      toast.success("Your profile has been successfully updated.");
+
       // Exit edit mode after successful update
       setEditMode(false);
     } catch (error) {
       console.error("Error updating personal information:", error);
-      toast({
-        title: "Update failed",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -286,8 +228,10 @@ export function PersonalInformation() {
     if (editMode) {
       // If we're in edit mode, show confirmation dialog before canceling
       const formValues = form.getValues();
-      const hasChanges = originalData && Object.keys(getChangedFields(originalData, formValues)).length > 0;
-      
+      const hasChanges =
+        originalData &&
+        Object.keys(getChangedFields(originalData, formValues)).length > 0;
+
       if (hasChanges) {
         setShowSaveDialog(true);
       } else {
@@ -304,7 +248,7 @@ export function PersonalInformation() {
   const handleCancelEdit = () => {
     setEditMode(false);
     form.reset(originalData || undefined);
-    setSelectedDate(parseStringToDate(originalData?.dateOfBirth || ""));
+    setSelectedDate(parseStringToDate(originalData?.dob || ""));
   };
 
   if (isFetching) {
@@ -328,12 +272,12 @@ export function PersonalInformation() {
           <div>
             <CardTitle>Personal Information</CardTitle>
             <CardDescription>
-              {editMode 
-                ? "Edit your personal details below" 
+              {editMode
+                ? "Edit your personal details below"
                 : "Your personal details and contact information."}
             </CardDescription>
           </div>
-          <Button 
+          <Button
             onClick={handleEditToggle}
             variant={editMode ? "default" : "outline"}
           >
@@ -353,15 +297,15 @@ export function PersonalInformation() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="fullName"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Your full name" 
-                          {...field} 
-                          disabled={!editMode} 
+                        <Input
+                          placeholder="Your full name"
+                          {...field}
+                          disabled={!editMode}
                         />
                       </FormControl>
                       <FormMessage />
@@ -376,10 +320,10 @@ export function PersonalInformation() {
                     <FormItem>
                       <FormLabel>Display Name</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Username or nickname" 
-                          {...field} 
-                          disabled={!editMode} 
+                        <Input
+                          placeholder="Username or nickname"
+                          {...field}
+                          disabled={!editMode}
                         />
                       </FormControl>
                       <FormMessage />
@@ -413,7 +357,7 @@ export function PersonalInformation() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 ">
                 <FormField
                   control={form.control}
-                  name="dateOfBirth"
+                  name="dob"
                   render={({ field }) => (
                     <FormItem className="flex flex-col h-14">
                       <FormLabel>Date of Birth</FormLabel>
@@ -425,7 +369,9 @@ export function PersonalInformation() {
                             onChange={(e) => {
                               if (editMode) {
                                 field.onChange(e);
-                                setSelectedDate(parseStringToDate(e.target.value));
+                                setSelectedDate(
+                                  parseStringToDate(e.target.value)
+                                );
                               }
                             }}
                             disabled={!editMode}
@@ -434,7 +380,11 @@ export function PersonalInformation() {
                         {editMode && (
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button variant={"outline"} size="icon" type="button">
+                              <Button
+                                variant={"outline"}
+                                size="icon"
+                                type="button"
+                              >
                                 <CalendarIcon className="h-4 w-4" />
                               </Button>
                             </PopoverTrigger>
@@ -450,7 +400,8 @@ export function PersonalInformation() {
                                   }
                                 }}
                                 disabled={(date) =>
-                                  date > new Date() || date < new Date("1990-01-01")
+                                  date > new Date() ||
+                                  date < new Date("1990-01-01")
                                 }
                                 captionLayout="dropdown"
                                 hideNavigation
@@ -469,210 +420,211 @@ export function PersonalInformation() {
                                   Dropdown: (props: DropdownProps) => {
                                     return (
                                       <Select
-                                      value={String(props.value)}
-                                      onValueChange={(value) => {
-                                        if (props.onChange) {
-                                          handleCalendarChange(
-                                            value,
-                                            props.onChange
-                                          );
-                                        }
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-8 w-fit font-medium first:grow">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent className="max-h-[min(16rem,var(--radix-select-content-available-height))]">
-                                        {props.options?.map((option) => (
-                                          <SelectItem
-                                            key={option.value}
-                                            value={String(option.value)}
-                                            disabled={option.disabled}
-                                          >
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  );
-                                },
-                              }}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                    </div>
-                    <FormDescription>
-                      Enter date in YYYY-MM-DD format or use the calendar
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="gender"
-                render={({ field }) => (
-                  <FormItem className="h-14 mt-6 md:mt-0">
-                    <FormLabel>Gender</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                      disabled={!editMode}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your gender" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="non-binary">Non-binary</SelectItem>
-                        <SelectItem value="prefer-not-to-say">
-                          Prefer not to say
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 mt-12 gap-6">
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem className="h-14">
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="City, Country" 
-                        {...field} 
-                        disabled={!editMode} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="phoneNumber"
-                render={({ field }) => (
-                  <FormItem className="h-14">
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Your phone number" 
-                        {...field} 
-                        disabled={!editMode} 
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Your phone number is private and not shared.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="school"
-                render={({ field }) => (
-                  <FormItem className="mt-6">
-                    <FormLabel>School</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Your school" 
-                        {...field} 
-                        disabled={!editMode} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="grade"
-                render={({ field }) => (
-                  <FormItem className="mt-6">
-                    <FormLabel>Grade</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="12th" 
-                        {...field}
-                        disabled={!editMode} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {editMode && (
-              <CardFooter className="px-0 pt-6 flex justify-end space-x-2 border-t">
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={handleCancelEdit}
-                  disabled={isLoading}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
+                                        value={String(props.value)}
+                                        onValueChange={(value) => {
+                                          if (props.onChange) {
+                                            handleCalendarChange(
+                                              value,
+                                              props.onChange
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8 w-fit font-medium first:grow">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[min(16rem,var(--radix-select-content-available-height))]">
+                                          {props.options?.map((option) => (
+                                            <SelectItem
+                                              key={option.value}
+                                              value={String(option.value)}
+                                              disabled={option.disabled}
+                                            >
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    );
+                                  },
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                      </div>
+                      <FormDescription>
+                        Enter date in YYYY-MM-DD format or use the calendar
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
-              </CardFooter>
-            )}
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+                />
 
-    <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-          <AlertDialogDescription>
-            You have unsaved changes. Do you want to save them before exiting edit mode?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel 
-            onClick={() => {
-              handleCancelEdit();
-              setShowSaveDialog(false);
-            }}
-          >
-            Discard Changes
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              form.handleSubmit(onSubmit)();
-              setShowSaveDialog(false);
-            }}
-          >
-            Save Changes
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </>
-);
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem className="h-14 mt-6 md:mt-0">
+                      <FormLabel>Gender</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        value={field.value}
+                        disabled={!editMode}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="non-binary">Non-binary</SelectItem>
+                          <SelectItem value="prefer-not-to-say">
+                            Prefer not to say
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 mt-12 gap-6">
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem className="h-14">
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="City, Country"
+                          {...field}
+                          disabled={!editMode}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem className="h-14">
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Your phone number"
+                          {...field}
+                          disabled={!editMode}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Your phone number is private and not shared.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="school"
+                  render={({ field }) => (
+                    <FormItem className="mt-6">
+                      <FormLabel>School</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Your school"
+                          {...field}
+                          disabled={!editMode}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="grade"
+                  render={({ field }) => (
+                    <FormItem className="mt-6">
+                      <FormLabel>Grade</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="12th"
+                          {...field}
+                          disabled={!editMode}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {editMode && (
+                <CardFooter className="px-0 pt-6 flex justify-end space-x-2 border-t">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={handleCancelEdit}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </CardFooter>
+              )}
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Do you want to save them before exiting
+              edit mode?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                handleCancelEdit();
+                setShowSaveDialog(false);
+              }}
+            >
+              Discard Changes
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                form.handleSubmit(onSubmit)();
+                setShowSaveDialog(false);
+              }}
+            >
+              Save Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }

@@ -27,7 +27,7 @@ export const signUpSchema = z.object({
 });
 
 export const personalInfoSchema = z.object({
-  fullName: z.string().min(2, {
+  name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
   displayName: z
@@ -42,9 +42,9 @@ export const personalInfoSchema = z.object({
       message: "Bio must be 255 characters or less.",
     })
     .optional(),
-  dateOfBirth: z.string().optional(),
+  dob: z.string().optional(),
   location: z.string().optional(),
-  phoneNumber: z.string().optional(),
+  phone: z.string().optional(),
   school: z.string().optional(),
   grade: z.string().optional(),
   gender: z.string().optional(),
@@ -67,11 +67,37 @@ export const resetPasswordSchema = z.object({
     .regex(/[0-9]/, { message: "Password must contain at least one number" }),
 });
 
+export const updatePasswordFormSchema = z
+  .object({
+    currentPassword: z.string().min(8, {
+      message: "Password must be at least 8 characters.",
+    }),
+    newPassword: z
+      .string()
+      .min(8, {
+        message: "Password must be at least 8 characters.",
+      })
+      .regex(/[A-Z]/, {
+        message: "Password must contain at least one uppercase letter",
+      })
+      .regex(/[a-z]/, {
+        message: "Password must contain at least one lowercase letter",
+      })
+      .regex(/[0-9]/, { message: "Password must contain at least one number" }),
+    confirmPassword: z.string().min(8, {
+      message: "Password must be at least 8 characters.",
+    }),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "The passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export const twoFaFormSchema = z.object({
   isEnabled: z.boolean(),
   password: z
     .string()
-    .min(8, { message: "Password must be at least 8 characters" })
+    .min(8, { message: "Password must be at least 8 characters" }),
 });
 
 type LoginSchema = z.infer<typeof loginSchema>;

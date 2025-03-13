@@ -9,13 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Mail, MapPin, Calendar, Upload } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { authClient } from "@/lib/auth-client";
+import { Session } from "@/lib/auth";
+import { UserDashboardData } from "@/actions/user-actions";
+import { format } from "date-fns";
 
-interface ProfileCardProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface ProfileCardProps extends React.HTMLAttributes<HTMLDivElement> {session: UserDashboardData}
 
-export function ProfileCard({ className, ...props }: ProfileCardProps) {
+export function ProfileCard({ className, session, ...props }: ProfileCardProps) {
   const [uploading, setUploading] = useState(false);
-  const { data: session } = authClient.useSession()
-  const currentUser = session?.user.name || "User";
+  const currentUser = session.name || "User";
   const currentDate = new Date().toLocaleDateString();
 
   const handleImageUpload = () => {
@@ -23,6 +25,7 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
     // Simulate upload process
     setTimeout(() => setUploading(false), 1500);
   };
+  console.log("User Data: ", session);
 
   return (
     <div className={cn(className)} {...props}>
@@ -31,7 +34,7 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
           <div className="flex flex-col items-center">
             <div className="relative group">
               <Avatar className="h-28 w-28 border-4 border-background">
-                <AvatarImage src={session?.user?.image || 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y2F0fGVufDB8fDB8fHww'} alt={currentUser} />
+                <AvatarImage src={session?.image || 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y2F0fGVufDB8fDB8fHww'} alt={currentUser} />
                 <AvatarFallback className="bg-[#7091e6]/10 text-[#7091e6] text-xl">
                   {currentUser[0]}
                 </AvatarFallback>
@@ -71,15 +74,15 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
             <div className="w-full space-y-3">
               <div className="flex items-center">
                 <Mail className="h-4 w-4 text-muted-foreground mr-3" />
-                <p className="text-sm">{session?.user?.email}</p>
+                <p className="text-sm">{session?.email}</p>
               </div>
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 text-muted-foreground mr-3" />
-                <p className="text-sm">{session?.user.role}</p>
+                <p className="text-sm">{session?.address}</p>
               </div>
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 text-muted-foreground mr-3" />
-                <p className="text-sm">Joined </p>
+                <p className="text-sm">Joined {format(session.createdAt, "MMMM yyyy")} </p>
               </div>
             </div>
             
@@ -97,7 +100,7 @@ export function ProfileCard({ className, ...props }: ProfileCardProps) {
             <div className="w-full border-t border-border my-6"></div>
             
             <div className="w-full text-xs text-center text-muted-foreground">
-              Last updated: {currentDate}
+              Last updated: {session.updatedAt.toLocaleDateString('en-ca')}
             </div>
           </div>
         </CardContent>

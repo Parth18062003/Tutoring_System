@@ -7,6 +7,7 @@ import { resend } from "./resend";
 import { sendVerifyEmail } from "@/components/email/verify-email-token";
 import { twoFactor } from "better-auth/plugins";
 import { sendOtpMail } from "@/components/email/otp-mail";
+import { sendUpdateEmail } from "@/components/email/update-email";
 
 const prisma = new PrismaClient();
 export const auth = betterAuth({
@@ -14,6 +15,25 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  user: {
+    changeEmail: {
+      enabled: true,
+      sendChangeEmailVerification: async (
+        { user, newEmail, url, token },
+        request
+      ) => {
+        await resend.emails.send({
+          from: "Brain Wave <onboarding@resend.dev>",
+          to: ["2021.parth.kadam@ves.ac.in"],
+          subject: "Approve your email change",
+          react: sendUpdateEmail({
+            title: "Update Email",
+            magicLink: url,
+          }),
+        });
+      },
+    },
+  },
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days
     updateAge: 60 * 60 * 24 * 7, // 7 days (every 7 days the session expiration is updated)
