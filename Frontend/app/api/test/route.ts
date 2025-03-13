@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
-    console.log("session", session);
 
     if (!session?.user || !session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -67,7 +66,6 @@ export async function PUT(request: NextRequest) {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
-    console.log("session", session);
 
     if (!session?.user || !session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -83,12 +81,12 @@ export async function PUT(request: NextRequest) {
           id: session.user.id,
         },
         data: {
-          name: validatedData.fullName,
+          name: validatedData.name,
           bio: validatedData.bio,
-          dob: validatedData.dateOfBirth,
+          dob: validatedData.dob,
           address: validatedData.location,
           gender: validatedData.gender,
-          phone: parsePhoneNumber(validatedData.phoneNumber),
+          phone: parsePhoneNumber(validatedData.phone),
           school: validatedData.school,
           grade: validatedData.grade,
         },

@@ -31,11 +31,25 @@ import EnableTwoFactor from "../auth/enable-two-factor";
 import { UserDashboardData } from "@/actions/user-actions";
 import { authClient } from "@/lib/auth-client";
 import { updatePasswordFormSchema } from "@/lib/schema";
-import { ca } from "date-fns/locale";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { se } from "date-fns/locale";
 
 const emailFormSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
+  }),
+});
+
+const deleteFormSchema = z.object({
+  confirm: z.string().refine((val: string | null) => val === "delete", {
+    message: 'Please type "delete" to confirm.',
   }),
 });
 
@@ -44,11 +58,16 @@ export function AccountSettings({ session }: { session: UserDashboardData }) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<
+    boolean | undefined
+  >(false);
+  const isEmailVerified = session?.emailVerified;
   const lastLogin = "2025-03-07 16:59:21";
+
   const emailForm = useForm<z.infer<typeof emailFormSchema>>({
     resolver: zodResolver(emailFormSchema),
     defaultValues: {
-      email: "parth18062003@example.com",
+      email: session?.email || "",
     },
   });
 
@@ -61,8 +80,31 @@ export function AccountSettings({ session }: { session: UserDashboardData }) {
     },
   });
 
-  function onEmailSubmit(data: z.infer<typeof emailFormSchema>) {
-    toast.success("A verification link has been sent to your email address.");
+  const deleteForm = useForm<z.infer<typeof deleteFormSchema>>({
+    resolver: zodResolver(deleteFormSchema),
+    defaultValues: {
+      confirm: "delete",
+    },
+  });
+
+  async function onEmailSubmit(data: z.infer<typeof emailFormSchema>) {
+    setIsSubmitting(true);
+    try {
+      await authClient.changeEmail({
+        newEmail: data.email,
+        callbackURL: "/dashboard/profile", //to redirect after verification
+      });
+      isEmailVerified
+        ? toast.info(
+            "A verification link has been sent to your new email address."
+          )
+        : toast.info("Your email address has been successfully updated.");
+    } catch (error) {
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      emailForm.reset();
+    }
   }
 
   async function onPasswordSubmit(
@@ -75,13 +117,28 @@ export function AccountSettings({ session }: { session: UserDashboardData }) {
         currentPassword: data.currentPassword,
         revokeOtherSessions: true, // revoke all other sessions the user is signed into
       });
-      setIsSubmitting(false);
       toast("Your password has been successfully updated.");
     } catch (error) {
-      setIsSubmitting(false);
       toast.error("An error occurred. Please try again.");
     } finally {
+      setIsSubmitting(false);
       passwordForm.reset();
+    }
+  }
+
+  async function onDeleteAccount(data: z.infer<typeof deleteFormSchema>) {
+    setIsSubmitting(true);
+    try {
+      await authClient.deleteUser({
+        callbackURL: "/goodbye",
+      });
+      toast("Please check your email to confirm account deletion.");
+    } catch (error) {
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      setShowConfirmDialog(false);
+      deleteForm.reset();
     }
   }
 
@@ -107,17 +164,28 @@ export function AccountSettings({ session }: { session: UserDashboardData }) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Your email address" {...field} />
+                      <Input
+                        placeholder={
+                          isEmailVerified
+                            ? "Enter your email address"
+                            : "Enter new email"
+                        }
+                        {...field}
+                      />
                     </FormControl>
                     <FormDescription>
-                      We'll send a verification link to this email.
+                      {isEmailVerified
+                        ? "We'll send a verification link to this email."
+                        : "Update your email address."}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <div className="flex justify-end">
-                <Button type="submit">Update Email</Button>
+                <Button type="submit">
+                  {isSubmitting ? "Updating..." : "Update Email"}
+                </Button>
               </div>
             </form>
           </Form>
@@ -242,7 +310,7 @@ export function AccountSettings({ session }: { session: UserDashboardData }) {
 
               <div className="flex justify-end">
                 <Button type="submit">
-                  {isSubmitting ? "Updating" : "Update Password"}
+                  {isSubmitting ? "Updating..." : "Update Password"}
                 </Button>
               </div>
             </form>
@@ -293,18 +361,74 @@ export function AccountSettings({ session }: { session: UserDashboardData }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-md border border-destructive/50 p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between space-x-4">
               <div>
                 <h4 className="text-sm font-medium">Delete Account</h4>
                 <p className="text-sm text-muted-foreground">
                   Permanently delete your account and all associated data.
                 </p>
               </div>
-              <Button variant="destructive">Delete Account</Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setShowConfirmDialog(true);
+                }}
+              >
+                Delete Account
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex gap-2">
+              <AlertCircle size={16} /> Action cannot be undone!
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...deleteForm}>
+            <form onSubmit={deleteForm.handleSubmit(onDeleteAccount)}>
+              <FormField
+                control={deleteForm.control}
+                name="confirm"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="delete"
+                        {...field}
+                        required
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
+          <DialogDescription>
+            Type <span className="bg-zinc-300 p-1 rounded-sm">delete</span> to
+            confirm deleting your account
+          </DialogDescription>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog((prev) => !prev)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteForm.handleSubmit(onDeleteAccount)}
+            >
+              {isSubmitting ? "Deleting..." : "Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

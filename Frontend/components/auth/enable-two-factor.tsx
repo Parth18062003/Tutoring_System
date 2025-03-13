@@ -25,6 +25,7 @@ type TwoFaFormType = z.infer<typeof twoFaFormSchema>;
 const EnableTwoFactor = ({ session }: { session: UserDashboardData }) => {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<boolean | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const form = useForm<TwoFaFormType>({
     resolver: zodResolver(twoFaFormSchema),
     defaultValues: {
@@ -45,6 +46,7 @@ const EnableTwoFactor = ({ session }: { session: UserDashboardData }) => {
   };
 
   async function onSubmit(values: TwoFaFormType) {
+    setIsSubmitting(true);
     try {
       if (pendingStatus) {
         const { data, error } = await authClient.twoFactor.enable({
@@ -55,6 +57,7 @@ const EnableTwoFactor = ({ session }: { session: UserDashboardData }) => {
           throw new Error(error.message);
         }
 
+        setIsSubmitting(false);
         form.setValue("isEnabled", true);
         toast.success("2FA enabled successfully");
       }
@@ -68,11 +71,11 @@ const EnableTwoFactor = ({ session }: { session: UserDashboardData }) => {
           toast.error(error.message);
           throw new Error(error.message);
         }
-
+        setIsSubmitting(false);
         form.setValue("isEnabled", false);
         toast.success("2FA disabled successfully");
       }
-
+      setIsSubmitting(false);
       setShowPasswordDialog(false);
       form.setValue("password", "");
       setPendingStatus(null);
@@ -145,7 +148,7 @@ const EnableTwoFactor = ({ session }: { session: UserDashboardData }) => {
                     Cancel
                   </Button>
                   <Button type="button" onClick={form.handleSubmit(onSubmit)}>
-                    {pendingStatus ? "Enable" : "Disable"}
+                    {isSubmitting ? "Confirming..." : "Confirm"}
                   </Button>
                 </div>
               </div>

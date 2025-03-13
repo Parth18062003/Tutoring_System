@@ -25,7 +25,6 @@ export default async function middleware(request: NextRequest) {
 		},
 	});  */
   const session = getSessionCookie(request);
-  console.log("session",session);
   if (!session) {
     if (isAuthRoute || isPasswordRoute || isPublicRoute) {
       return NextResponse.next();

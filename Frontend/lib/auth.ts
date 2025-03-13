@@ -8,6 +8,7 @@ import { sendVerifyEmail } from "@/components/email/verify-email-token";
 import { twoFactor } from "better-auth/plugins";
 import { sendOtpMail } from "@/components/email/otp-mail";
 import { sendUpdateEmail } from "@/components/email/update-email";
+import { sendDeleteUser } from "@/components/email/delete-account-mail";
 
 const prisma = new PrismaClient();
 export const auth = betterAuth({
@@ -28,6 +29,20 @@ export const auth = betterAuth({
           subject: "Approve your email change",
           react: sendUpdateEmail({
             title: "Update Email",
+            magicLink: url,
+          }),
+        });
+      },
+    },
+    deleteUser: {
+      enabled: true,
+      sendDeleteAccountVerification: async ({ user, url, token }, request) => {
+        await resend.emails.send({
+          from: "Brain Wave <onboarding@resend.dev>",
+          to: ["2021.parth.kadam@ves.ac.in"],
+          subject: "Confirm account deletion",
+          react: sendDeleteUser({
+            title: "Delete Account",
             magicLink: url,
           }),
         });
