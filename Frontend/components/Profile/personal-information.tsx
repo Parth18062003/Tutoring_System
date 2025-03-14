@@ -124,20 +124,20 @@ export function PersonalInformation({
 
       try {
         // Use the data directly from the session
-        const dob = session.dob || "2003-06-18";
+        const dob = session.dob || "";
 
         const formData: UserDataType = {
-          name: session.name || "Parth Sharma",
-          displayName: "Parth18062003", // You may want to add this to your UserDashboardData
+          name: session.name || "",
+          displayName: "", // You may want to add this to your UserDashboardData
           bio:
             session.bio ||
-            "Computer Science student passionate about AI and machine learning.",
+            "",
           dob: dob,
-          location: session.address || "New Delhi, India", // Using address field for location
-          phone: session.phone || "+91 98765 43210",
-          school: session.school || "St. Xavier's School",
-          grade: session.grade || "12th",
-          gender: session.gender || "male",
+          location: session.address || "", // Using address field for location
+          phone: session.phone || "",
+          school: session.school || "",
+          grade: session.grade || "",
+          gender: session.gender || "",
         };
 
         setOriginalData(formData);

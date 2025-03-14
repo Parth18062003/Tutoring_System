@@ -94,6 +94,7 @@
   background: #5d76c4; 
 }
 
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

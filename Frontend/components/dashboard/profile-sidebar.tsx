@@ -118,16 +118,16 @@ export default function ProfileSidebar() {
       <SidebarContent className="pt-6">
         <SidebarHeader className="px-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#7874F2] to-[#6460c8]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#7874f2] to-[#b1cbfa]">
               <BrainCircuit className="h-5 w-5 text-white" />
             </div>
-            <span className="font-semibold text-lg text-gray-900">
+            <span className="font-semibold text-lg text-zinc-900">
               Brain Wave
             </span>
           </Link>
         </SidebarHeader>
         <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="px-4 text-sm text-gray-500">
+          <SidebarGroupLabel className="px-4 text-sm text-zinc-500">
             Profile Management
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -140,8 +140,8 @@ export default function ProfileSidebar() {
                       className={cn(
                         "flex items-center px-3 py-2.5 rounded-lg transition-",
                         pathname === item.href
-                          ? "bg-[#7091e6]/10 text-[#7874F2] hover:text-[#6460c8] hover:bg-[#DFE2FE] font-semibold"
-                          : "text-gray-700 hover:text-[#6460c8] hover:bg-[#DFE2FE]"
+                          ? "bg-[#7091e6]/10 text-[#7874f2] hover:text-[#6460c8] hover:bg-[#DFE2FE] font-semibold"
+                          : "text-zinc-700 hover:text-[#6460c8] hover:bg-[#DFE2FE]"
                       )}
                     >
                       <item.icon className="h-4 w-4" />
@@ -160,11 +160,8 @@ export default function ProfileSidebar() {
             <div className="font-medium text-base text-[#7874F2] mb-2">
               Logged in as
             </div>
-            <div className="text-gray-800 font-semibold">
+            <div className="text-zinc-800 font-semibold">
               {session?.user?.name}
-            </div>
-            <div className="mt-2 text-gray-600 text-xs">
-              Last login: 2 days ago
             </div>
           </div>
           <Button

@@ -12,49 +12,19 @@ import { authClient } from "@/lib/auth-client";
 import { Session } from "@/lib/auth";
 import { UserDashboardData } from "@/actions/user-actions";
 import { format } from "date-fns";
+import { UploadAvatar } from "./upload-avatar";
 
 interface ProfileCardProps extends React.HTMLAttributes<HTMLDivElement> {session: UserDashboardData}
 
 export function ProfileCard({ className, session, ...props }: ProfileCardProps) {
-  const [uploading, setUploading] = useState(false);
   const currentUser = session.name || "User";
-  const currentDate = new Date().toLocaleDateString();
-
-  const handleImageUpload = () => {
-    setUploading(true);
-    // Simulate upload process
-    setTimeout(() => setUploading(false), 1500);
-  };
-  console.log("User Data: ", session);
-
   return (
     <div className={cn(className)} {...props}>
       <Card >
         <CardContent className="p-6">
           <div className="flex flex-col items-center">
             <div className="relative group">
-              <Avatar className="h-28 w-28 border-4 border-background">
-                <AvatarImage src={session?.image || 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y2F0fGVufDB8fDB8fHww'} alt={currentUser} />
-                <AvatarFallback className="bg-[#7091e6]/10 text-[#7091e6] text-xl">
-                  {currentUser[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-white"
-                  onClick={handleImageUpload}
-                  disabled={uploading}
-                >
-                  <Upload className="h-5 w-5" />
-                </Button>
-              </div>
-              {uploading && (
-                <div className="absolute -bottom-2 left-0 right-0 flex justify-center">
-                  <Progress value={65} className="h-1 w-20" />
-                </div>
-              )}
+              <UploadAvatar session={session} />
             </div>
             
             <h2 className="text-xl font-semibold mt-4">{currentUser}</h2>

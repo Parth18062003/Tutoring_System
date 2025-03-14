@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Github, Linkedin, Twitter, AlertCircle, Mail } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
+import { authClient } from "@/lib/auth-client";
 
 interface ConnectedAccount {
   id: string;
@@ -19,7 +20,7 @@ interface ConnectedAccount {
 
 export function ConnectedAccounts() {
   const currentDate = "2025-03-07 17:04:03";
-  
+
   const [accounts, setAccounts] = React.useState<ConnectedAccount[]>([
     {
       id: "google",

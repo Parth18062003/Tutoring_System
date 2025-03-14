@@ -89,7 +89,7 @@ export function DashboardHeader({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10 border-2 border-border">
-                  <AvatarImage src={userImage} alt={userName} />
+                  <AvatarImage src={userImage} alt={userName} className="h-full w-full object-cover" />
                   <AvatarFallback className="bg-[#7091e6]/10 text-[#7091e6]">{initials}</AvatarFallback>
                 </Avatar>
               </Button>

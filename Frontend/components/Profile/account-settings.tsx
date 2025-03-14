@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -39,7 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { se } from "date-fns/locale";
+import { format, set } from "date-fns";
 
 const emailFormSchema = z.object({
   email: z.string().email({
@@ -53,16 +53,49 @@ const deleteFormSchema = z.object({
   }),
 });
 
+interface Session {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  expiresAt: Date;
+  token: string;
+  ipAddress?: string | null | undefined | undefined;
+  userAgent?: string | null | undefined | undefined;
+}
+
 export function AccountSettings({ session }: { session: UserDashboardData }) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [lastLogins, setLastLogins] = useState<Session[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState<
     boolean | undefined
   >(false);
   const isEmailVerified = session?.emailVerified;
-  const lastLogin = "2025-03-07 16:59:21";
+
+  async function getLastLogin() {
+    try {
+      const sessions = await authClient.listSessions();
+      if (sessions.data && sessions.data.length > 0) {
+        const lastFewLogins = sessions.data.slice(0, 5); // For example, we take the last 5 logins
+        setLastLogins(lastFewLogins);
+      }
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+    }
+  }
+
+  useEffect(() => {
+    getLastLogin();
+  }, []);
+
+  async function revokeSession(token: string) {
+    await authClient.revokeSession({
+      token: token,
+    });
+  }
 
   const emailForm = useForm<z.infer<typeof emailFormSchema>>({
     resolver: zodResolver(emailFormSchema),
@@ -340,14 +373,49 @@ export function AccountSettings({ session }: { session: UserDashboardData }) {
             <Switch defaultChecked />
           </div>
 
-          <div className="border-t pt-6">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Login Information</AlertTitle>
-              <AlertDescription>
-                Last login: {lastLogin} from New Delhi, India
-              </AlertDescription>
-            </Alert>
+          <div className="border-t pt-6 space-y-4">
+            {lastLogins.map((login, index) => (
+              <div
+                key={login.id}
+                className="flex items-start space-x-4 p-4 shadow-sm rounded-lg border border-gray-200"
+              >
+                {/* Icon and alert title */}
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <AlertTitle className="text-lg font-semibold text-gray-800">
+                    Login Information #{index + 1}
+                  </AlertTitle>
+                  <AlertDescription className="text-sm text-gray-600">
+                    <p>
+                      Last login:{" "}
+                      <span className="font-medium text-gray-900">
+                        {login.ipAddress}
+                      </span>
+                    </p>
+                    <p>
+                      From{" "}
+                      <span className="font-medium">
+                        {login.userAgent}
+                      </span>{" "}
+                      on{" "}
+                      <span className="font-medium">
+                        {format(login.createdAt, "dd MMMM yyyy hh:mm a")}
+                      </span>
+                    </p>
+                  </AlertDescription>
+                </div>
+                <div className="flex-shrink-0 self-start">
+                  <Button
+                    variant="outline"
+                    onClick={() => revokeSession(login.token)}
+                  >
+                    Revoke
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
