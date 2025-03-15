@@ -118,16 +118,16 @@ export default function ProfileSidebar() {
       <SidebarContent className="pt-6">
         <SidebarHeader className="px-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#7874f2] to-[#b1cbfa]">
-              <BrainCircuit className="h-5 w-5 text-white" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br ">
+              <BrainCircuit className="h-5 w-5 " />
             </div>
-            <span className="font-semibold text-lg text-zinc-900">
+            <span className="font-semibold text-lg ">
               Brain Wave
             </span>
           </Link>
         </SidebarHeader>
         <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="px-4 text-sm text-zinc-500">
+          <SidebarGroupLabel className="px-4 text-sm ">
             Profile Management
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -140,8 +140,8 @@ export default function ProfileSidebar() {
                       className={cn(
                         "flex items-center px-3 py-2.5 rounded-lg transition-",
                         pathname === item.href
-                          ? "bg-[#7091e6]/10 text-[#7874f2] hover:text-[#6460c8] hover:bg-[#DFE2FE] font-semibold"
-                          : "text-zinc-700 hover:text-[#6460c8] hover:bg-[#DFE2FE]"
+                          ? " font-semibold"
+                          : ""
                       )}
                     >
                       <item.icon className="h-4 w-4" />
@@ -156,8 +156,8 @@ export default function ProfileSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t p-4">
         <div className="p-4">
-          <div className="bg-[#DFE2FE] rounded-lg p-4 mb-4 border border-[#B1CBFA]">
-            <div className="font-medium text-base text-[#7874F2] mb-2">
+          <div className=" rounded-lg p-4 mb-4 border ">
+            <div className="font-medium text-base mb-2">
               Logged in as
             </div>
             <div className="text-zinc-800 font-semibold">
@@ -166,7 +166,7 @@ export default function ProfileSidebar() {
           </div>
           <Button
             onClick={() => setIsDialogOpen(true)} // Open the dialog when logout button is clicked
-            className="w-full text-white bg-[#8E98F5] hover:bg-[#7874F2] transition-colors duration-200"
+            className="w-full transition-colors duration-200"
           >
             <LogOut className="h-5 w-5" />
             <span>Logout</span>
@@ -188,13 +188,13 @@ export default function ProfileSidebar() {
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={() => setIsDialogOpen(false)}
-              className="text-white bg-[#7874F2] hover:bg-[#8E98F5] hover:text-white transition-colors duration-200"
+              className="transition-colors duration-200"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleSignOut} // Call sign out after confirmation
-              className="bg-[#8E98F5] hover:bg-[#7874F2] transition-colors duration-200"
+              className="transition-colors duration-200"
             >
               Logout
             </AlertDialogAction>

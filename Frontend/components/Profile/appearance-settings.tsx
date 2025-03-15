@@ -36,6 +36,7 @@ import { CheckIcon, MinusIcon } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useTheme } from "next-themes";
+import { ThemeSelector } from "../ThemeSelector";
 
 const appearanceFormSchema = z.object({
   theme: z.string(),
@@ -64,6 +65,7 @@ export function AppearanceSettings() {
     setTheme(data.theme);
     toast.info(`Theme set to ${data.theme}`);
   }
+  console.log("Theme", resolvedTheme);
 
   return (
     <Card>
@@ -162,7 +164,8 @@ export function AppearanceSettings() {
               )}
             />
 
-            <FormField
+<ThemeSelector />
+{/*             <FormField
               control={form.control}
               name="color"
               render={({ field }) => (
@@ -216,7 +219,7 @@ export function AppearanceSettings() {
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
 
             <FormField
               control={form.control}
