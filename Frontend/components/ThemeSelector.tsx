@@ -1,6 +1,6 @@
 "use client"
 
-import { useThemeConfig } from "@/components/active-theme"
+import { useThemeConfig } from "@/hooks/use-active-theme"
 import {
   Select,
   SelectContent,
@@ -9,10 +9,11 @@ import {
   SelectValue,
 } from "./ui/select"
 import { THEMES } from "@/lib/themes"
+import { cn } from "@/lib/utils"
 
 export function ThemeSelector() {
   const { activeTheme, setActiveTheme } = useThemeConfig()
-
+console.log("Active theme Color",activeTheme)
   return (
     <Select value={activeTheme} onValueChange={setActiveTheme}>
       <SelectTrigger className="w-32">
@@ -21,7 +22,7 @@ export function ThemeSelector() {
       <SelectContent align="end">
         {THEMES.map((theme) => (
           <SelectItem key={theme.name} value={theme.value}>
-            <div className={`h-4 w-4 rounded-full bg-${theme.value}-500`} />
+           <div className={cn(`h-4 w-4 rounded-full`, `bg-${theme.value}-500`)} />
             {theme.name}
           </SelectItem>
         ))}

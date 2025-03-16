@@ -4,7 +4,23 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@custom-variant extraSmall (&:is(.extraSmall *));
+
 @custom-variant small (&:is(.small *));
+
+@custom-variant mediumSmall (&:is(.mediumSmall *));
+
+@custom-variant medium (&:is(.medium *));
+
+@custom-variant base (&:is(.base *));
+
+@custom-variant large (&:is(.large *));
+
+@custom-variant extraLarge (&:is(.extraLarge *));
+
+@custom-variant huge (&:is(.huge *));
+
+@custom-variant extraHuge (&:is(.extraHuge *));
 
 @import "./themes.css";
 
@@ -90,12 +106,12 @@
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: #7091e6;
+  background: var(--primary);
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #5d76c4; 
+  background: var(--primary-foreground); 
 }
 
 

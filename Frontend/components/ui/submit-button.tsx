@@ -13,7 +13,7 @@ const SubmitButton: React.FC<SubmitButtonProps> = ({ isSubmitting, text, childre
   return (
     <Button
       type="submit"
-      className="w-full py-2 px-4 bg-[#7874F2] hover:bg-[#8E98F5] text-white font-bold rounded-md transition duration-300"
+      className="w-full py-2 px-4 font-bold rounded-md transition duration-300"
       disabled={isSubmitting}
       {...props} // Spread the rest of the props onto the button
     >

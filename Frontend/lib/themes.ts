@@ -11,7 +11,7 @@ export const THEMES = [
     name: "Indigo",
     value: "indigo",
     colors: {
-      light: "oklch(1 0 0)",
+      light: "oklch(0.96 0.02 272)",
       dark: "oklch(0.147 0.004 49.25)",
     },
   },
@@ -56,12 +56,36 @@ export const THEMES = [
     },
   },
 /*   {
+    name: "Extra Small",
+    value: "extraSmall",
+  }, 
+  {
     name: "Small",
     value: "small",
-    colors: {
-      light: "oklch(1 0 0)",
-      dark: "oklch(0.145 0 0)",
-    },
-  }, */
+  },
+  {
+    name: "Medium Small",
+    value: "mediumSmall"
+  },
+  {
+    name: "Medium",
+    value: "medium",
+  },
+  {
+    name: "Large",
+    value: "Large",
+  },
+  {
+    name: "Extra Large",
+    value: "extraLarge",
+  },
+  {
+    name: "Huge",
+    value: "huge",
+  },
+  {
+    name: "Extra Huge",
+    value: "extraHuge",
+  } */
 ];
 export type Theme = (typeof THEMES)[number];

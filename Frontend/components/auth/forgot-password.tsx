@@ -44,7 +44,9 @@ const ForgotPassword = () => {
   };
   return (
     <Card className="max-w-md mx-auto mt-8">
-      <CardHeader className="text-center text-xl font-bold text-[#7874F2]">Forgot your password</CardHeader>
+      <CardHeader className="text-center text-xl font-bold">
+        Forgot your password
+      </CardHeader>
       <CardContent>
         {" "}
         <Form {...form}>
@@ -66,13 +68,15 @@ const ForgotPassword = () => {
                 </FormItem>
               )}
             />
-            <SubmitButton isSubmitting={isPending} text="Sending..." >
-              Send reset link
-            </SubmitButton>
           </form>
         </Form>
       </CardContent>
-      <CardFooter></CardFooter>
+      <CardFooter>
+        {" "}
+        <SubmitButton isSubmitting={isPending} text="Sending...">
+          Send reset link
+        </SubmitButton>
+      </CardFooter>
     </Card>
   );
 };

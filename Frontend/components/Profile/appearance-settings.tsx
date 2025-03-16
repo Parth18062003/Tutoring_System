@@ -21,13 +21,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -37,6 +30,8 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { ThemeSelector } from "../ThemeSelector";
+import { useThemeConfig } from "../../hooks/use-active-theme";
+import { useFontSizeConfig } from "@/hooks/use-font-size";
 
 const appearanceFormSchema = z.object({
   theme: z.string(),
@@ -49,6 +44,8 @@ const appearanceFormSchema = z.object({
 
 export function AppearanceSettings() {
   const { setTheme, resolvedTheme } = useTheme();
+  const { activeTheme, setActiveTheme } = useThemeConfig();
+  const { fontSize, setFontSize } = useFontSizeConfig();
   const form = useForm<z.infer<typeof appearanceFormSchema>>({
     resolver: zodResolver(appearanceFormSchema),
     defaultValues: {
@@ -62,10 +59,20 @@ export function AppearanceSettings() {
   });
 
   function onSubmit(data: z.infer<typeof appearanceFormSchema>) {
-    setTheme(data.theme);
-    toast.info(`Theme set to ${data.theme}`);
+    const { theme, fontSize } = data;
+  
+    if (theme) {
+      setTheme(theme);
+      toast.info(`Theme set to ${theme}`);
+      console.log("Theme", theme); // assuming `resolvedTheme` holds the actual theme value
+    }
+  
+    if (fontSize) {
+      setFontSize(fontSize);
+      toast.info(`Font size set to ${fontSize}%`);
+      console.log("Font Size", fontSize);
+    }
   }
-  console.log("Theme", resolvedTheme);
 
   return (
     <Card>
@@ -131,14 +138,14 @@ export function AppearanceSettings() {
                                 className={`
                                   relative rounded-md overflow-hidden shadow-md cursor-pointer
                                   transition-shadow duration-300 hover:shadow-lg
-                                  ${field.value === item.id ? "border-2 border-indigo-500" : "border border-zinc-200"}
+                                  ${field.value === item.id ? "border-2 border-ring shadow-ring" : "border border-primary-foreground"}
                                 `}
                               />
                               <span className="text-muted-foreground/70 mt-2 flex items-center gap-1">
                                 {field.value === item.id ? (
                                   <CheckIcon
                                     size={16}
-                                    className="text-indigo-500"
+                                    className="text-primary"
                                   />
                                 ) : (
                                   <MinusIcon size={16} />
@@ -146,7 +153,7 @@ export function AppearanceSettings() {
                                 <span
                                   className={`${
                                     field.value === item.id
-                                      ? "text-sm text-indigo-500" // Highlight selected theme
+                                      ? "text-sm text-primary" // Highlight selected theme
                                       : "text-xs" // Default unselected theme
                                   } font-medium text-center`}
                                 >
@@ -164,62 +171,7 @@ export function AppearanceSettings() {
               )}
             />
 
-<ThemeSelector />
-{/*             <FormField
-              control={form.control}
-              name="color"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Accent Color</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select accent color" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="blue">
-                        <div className="flex items-center">
-                          <div className="h-4 w-4 rounded-full bg-[#7091e6] mr-2" />
-                          Blue
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="purple">
-                        <div className="flex items-center">
-                          <div className="h-4 w-4 rounded-full bg-purple-500 mr-2" />
-                          Purple
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="green">
-                        <div className="flex items-center">
-                          <div className="h-4 w-4 rounded-full bg-green-500 mr-2" />
-                          Green
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="orange">
-                        <div className="flex items-center">
-                          <div className="h-4 w-4 rounded-full bg-orange-500 mr-2" />
-                          Orange
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="red">
-                        <div className="flex items-center">
-                          <div className="h-4 w-4 rounded-full bg-red-500 mr-2" />
-                          Red
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    The primary color used throughout the interface.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            /> */}
+            <ThemeSelector />
 
             <FormField
               control={form.control}
@@ -322,7 +274,9 @@ export function AppearanceSettings() {
         <Button variant="outline" type="button">
           Reset to Default
         </Button>
-        <Button type="submit" onClick={form.handleSubmit(onSubmit)}>Save Preferences</Button>
+        <Button type="submit" onClick={form.handleSubmit(onSubmit)}>
+          Save Preferences
+        </Button>
       </CardFooter>
     </Card>
   );

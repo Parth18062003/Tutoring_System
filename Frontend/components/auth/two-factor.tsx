@@ -95,7 +95,7 @@ const TwoFactor = () => {
 
   return (
     <Card className="max-w-md mx-auto mt-8">
-      <CardHeader className="text-center text-xl font-bold text-[#7874F2]">
+      <CardHeader className="text-center text-xl font-bold">
         Enter the OTP
       </CardHeader>
       <CardContent>

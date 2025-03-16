@@ -29,7 +29,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "../ui/sidebar"; 
+} from "../ui/sidebar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,39 +95,39 @@ export default function ProfileSidebar() {
   const pathname = usePathname();
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const router = useRouter();
-  const { data: session } = authClient.useSession()
-  
+  const { data: session } = authClient.useSession();
+
   const handleSignOut = async () => {
-		try {
-			await authClient.signOut({
-				fetchOptions: {
-					onSuccess: () => {
-						router.push("/authentication/sign-in");
-					},
-				},
-			});
-		} catch (error) {
-			console.error("Error signing out:", error);
-		} finally {
-			setIsDialogOpen(false);
-		}
-	};
+    try {
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.push("/authentication/sign-in");
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      setIsDialogOpen(false);
+    }
+  };
 
   return (
     <Sidebar className="w-64 border-r">
       <SidebarContent className="pt-6">
         <SidebarHeader className="px-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br ">
-              <BrainCircuit className="h-5 w-5 " />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-foreground">
+              <BrainCircuit className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-lg ">
+            <span className="font-semibold text-lg text-primary">
               Brain Wave
             </span>
           </Link>
         </SidebarHeader>
         <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="px-4 text-sm ">
+          <SidebarGroupLabel className="px-4 text-sm text-primary">
             Profile Management
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -137,12 +137,7 @@ export default function ProfileSidebar() {
                   <SidebarMenuButton asChild>
                     <Link
                       href={item.href}
-                      className={cn(
-                        "flex items-center px-3 py-2.5 rounded-lg transition-",
-                        pathname === item.href
-                          ? " font-semibold"
-                          : ""
-                      )}
+                      className={cn("flex items-center px-3 py-2.5 rounded-lg")}
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -156,17 +151,17 @@ export default function ProfileSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t p-4">
         <div className="p-4">
-          <div className=" rounded-lg p-4 mb-4 border ">
-            <div className="font-medium text-base mb-2">
+          <div className="bg-primary/20 rounded-lg p-4 mb-4 border border-primary-foreground">
+            <div className="font-medium text-base text-primary mb-2">
               Logged in as
             </div>
-            <div className="text-zinc-800 font-semibold">
+            <div className="text-primary font-bold text-lg">
               {session?.user?.name}
             </div>
           </div>
           <Button
             onClick={() => setIsDialogOpen(true)} // Open the dialog when logout button is clicked
-            className="w-full transition-colors duration-200"
+            className="w-full"
           >
             <LogOut className="h-5 w-5" />
             <span>Logout</span>
@@ -186,15 +181,11 @@ export default function ProfileSidebar() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => setIsDialogOpen(false)}
-              className="transition-colors duration-200"
-            >
+            <AlertDialogCancel onClick={() => setIsDialogOpen(false)}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleSignOut} // Call sign out after confirmation
-              className="transition-colors duration-200"
             >
               Logout
             </AlertDialogAction>

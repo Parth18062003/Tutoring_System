@@ -82,7 +82,7 @@ function ResetPasswordContent() {
   return (
     <Card className="max-w-md mx-auto mt-8">
       <CardHeader>
-        <CardTitle className="text-center text-xl font-bold text-[#7874F2]">
+        <CardTitle className="text-center text-xl font-bold">
           Reset Password
         </CardTitle>
       </CardHeader>
@@ -106,13 +106,14 @@ function ResetPasswordContent() {
                 </FormItem>
               )}
             />
-
-            <SubmitButton isSubmitting={isPending} text="Resetting password...">
-              Reset Password
-            </SubmitButton>
           </form>
         </Form>
       </CardContent>
+      <CardFooter>
+        <SubmitButton isSubmitting={isPending} text="Resetting password...">
+          Reset Password
+        </SubmitButton>
+      </CardFooter>
     </Card>
   );
 }

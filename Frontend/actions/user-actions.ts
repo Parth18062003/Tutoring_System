@@ -31,11 +31,7 @@ const getUserDataPromise = cache(async (): Promise<UserDashboardData> => {
     headers: await headers(),
   });
 
-  if (!session?.user?.id) {
-    redirect("/api/auth/signin");
-  }
-
-  const userId = session.user.id as string;
+  const userId = session?.user.id as string;
 
   try {
     const userData = await prisma.user.findUniqueOrThrow({

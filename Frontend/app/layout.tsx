@@ -3,7 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ActiveThemeProvider } from "@/components/active-theme";
+import { ActiveThemeProvider } from "@/hooks/use-active-theme";
+import { FontSizeProvider } from "@/hooks/use-font-size";
 import { cookies } from "next/headers";
 
 const geistSans = Geist({
@@ -28,6 +29,8 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies()
   const activeThemeValue = cookieStore.get("active_theme")?.value
+  const fontSizeValue = cookieStore.get("font_size")?.value
+  const fontSize = Number(fontSizeValue) || 100
   console.log("Active theme",activeThemeValue)
   return (
     <html lang="en" suppressHydrationWarning>
@@ -42,7 +45,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <ActiveThemeProvider initialTheme={activeThemeValue}>
+            <FontSizeProvider initialFontSize={fontSize}>
           {children}
+          </FontSizeProvider>
           </ActiveThemeProvider>
         </ThemeProvider>
         <Toaster />
