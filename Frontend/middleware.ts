@@ -1,15 +1,21 @@
 import { betterFetch } from "@better-fetch/fetch";
 import { NextResponse, type NextRequest } from "next/server";
-import { Session } from "@/lib/auth";
+import { auth, Session } from "@/lib/auth";
 import { getSessionCookie } from "better-auth/cookies";
+import { headers } from "next/headers";
+import { run } from "node:test";
 
-const authRoutes = ["/authentication/sign-in", "/authentication/sign-up", "/authentication/two-factor"];
+const authRoutes = [
+  "/authentication/sign-in",
+  "/authentication/sign-up",
+  "/authentication/two-factor",
+];
 const passwordRoutes = [
   "/authentication/reset-password",
   "/authentication/forgot-password",
 ];
 const adminRoutes = ["/admin"];
-const publicRoutes = ["/", ]
+const publicRoutes = ["/"];
 
 export default async function middleware(request: NextRequest) {
   const pathName = request.nextUrl.pathname;
@@ -18,7 +24,7 @@ export default async function middleware(request: NextRequest) {
   const isAdminRoute = adminRoutes.includes(pathName);
   const isPublicRoute = publicRoutes.includes(pathName);
 
-/*   	const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
+  /*   	const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
 		baseURL: request.nextUrl.origin,
 		headers: {
 			cookie: request.headers.get("cookie") || "", // Forward the cookies from the request
@@ -35,7 +41,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   if (session) {
-    if(isPublicRoute) {
+    if (isPublicRoute) {
       return NextResponse.next();
     }
     if (isAuthRoute || isPasswordRoute) {
@@ -43,7 +49,7 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-/*     if (isAdminRoute && session.user.role !== "admin") {
+  /*     if (isAdminRoute && session.user.role !== "admin") {
     return NextResponse.redirect(new URL("/", request.url));
   } */
 

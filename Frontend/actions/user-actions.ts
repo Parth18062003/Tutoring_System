@@ -1,7 +1,6 @@
 "use server";
 
 import { cache } from "react";
-import { redirect } from "next/navigation";
 import { revalidateTag } from "next/cache";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";

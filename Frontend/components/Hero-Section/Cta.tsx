@@ -6,11 +6,23 @@ import { ArrowRight, Brain, BrainCircuit, Sparkles, Zap } from "lucide-react";
 import Image from "next/image";
 
 const images = [
-    {src:"https://images.unsplash.com/photo-1618355776464-8666794d2520?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Y29sbGVnZSUyMHN0dWRlbnR8ZW58MHx8MHx8fDA%3D", i:1},
-{src:    "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8Y29sbGVnZSUyMHN0dWRlbnR8ZW58MHx8MHx8fDA%3D", i:2},
-{src:    "https://images.unsplash.com/photo-1630178836733-3d61d8974258?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8c3R1ZGVudHxlbnwwfHwwfHx8MA%3D%3D",i:3},
-{src:    "https://images.unsplash.com/photo-1623945194105-cd36c4433390?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGNvbGxlZ2UlMjBzdHVkZW50fGVufDB8fDB8fHww",i:4}
-]
+  {
+    src: "https://images.unsplash.com/photo-1618355776464-8666794d2520?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Y29sbGVnZSUyMHN0dWRlbnR8ZW58MHx8MHx8fDA%3D",
+    i: 1,
+  },
+  {
+    src: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8Y29sbGVnZSUyMHN0dWRlbnR8ZW58MHx8MHx8fDA%3D",
+    i: 2,
+  },
+  {
+    src: "https://images.unsplash.com/photo-1630178836733-3d61d8974258?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8c3R1ZGVudHxlbnwwfHwwfHx8MA%3D%3D",
+    i: 3,
+  },
+  {
+    src: "https://images.unsplash.com/photo-1623945194105-cd36c4433390?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fGNvbGxlZ2UlMjBzdHVkZW50fGVufDB8fDB8fHww",
+    i: 4,
+  },
+];
 export default function CallToAction() {
   const currentUser = "Parth18062003";
 
