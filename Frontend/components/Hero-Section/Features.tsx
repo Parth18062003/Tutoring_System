@@ -14,7 +14,7 @@ import Nlp from "../Bento-Grid/Nlp";
 export default function BentoGrid() {
   return (
     <>
-      <div className="absolute inset-x-0 -mt-11 flex items-end">
+      <div className="absolute inset-x-0 -mt-11 flex items-end" suppressHydrationWarning>
         <div className="mr-[calc(-1*(theme(spacing.8)-theme(spacing[1.5])))] h-11 flex-auto bg-slate-950"></div>
         <div className="flex justify-between mx-auto w-full px-6 sm:max-w-[40rem] md:max-w-[48rem] md:px-8 lg:max-w-[64rem] xl:max-w-[80rem]">
           <svg

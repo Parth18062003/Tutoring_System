@@ -3,11 +3,126 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BrainCircuit, LineChart, Target, ArrowBigUpDash, Headset } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 const Hero = () => {
+  const { resolvedTheme } = useTheme();
   return (
     <div className="mt-28 mb-12 md:mt-0 flex flex-col justify-center items-center min-h-screen w-full overflow-hidden">
+            <div
+              className="absolute -right-[0%] top-[10%] h-[300px] w-[400px] rounded-full bg-[#B1CBFA]/40 blur-[80px] animate-blob-slow overflow-x-hidden"
+              style={{ animationDelay: "0s" }}
+            ></div>
+            <div
+              className="absolute right-[30%] bottom-[10%] h-[250px] w-[150px] rounded-full bg-[#7874F2]/30 blur-[70px] animate-blob-fast overflow-x-hidden"
+              style={{ animationDelay: "4s" }}
+            ></div>
+            <div
+              className="absolute right-[20%] bottom-[20%] h-[180px] w-[100px] rounded-full bg-[#DFE2FE]/50 blur-[60px] animate-blob-medium overflow-x-hidden"
+              style={{ animationDelay: "3s" }}
+            ></div>
 
+            {/* Improved Grid Pattern */}
+            <div
+              className="absolute inset-0 h-full w-full"
+              style={{
+                backgroundImage: `linear-gradient(to right, rgba(223, 226, 254, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(142, 152, 245, 0.1) 0.5px, transparent 0.5px)`,
+                backgroundSize: "12rem 10rem",
+              }}
+            >
+              <div className="absolute pointer-events-none inset-0 flex items-center justify-center dark:bg-zinc-950 bg-zinc-50 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+            </div>
+
+            {/* Static randomly highlighted grid cells */}
+            <div className="absolute inset-0 h-full w-full overflow-hidden">
+              <div
+                className="absolute w-[12rem] h-[10rem]"
+                style={{
+                  left: "12rem",
+                  top: "30rem",
+                  backgroundImage:
+                    "linear-gradient(270deg, #8E98F5, rgba(172, 170, 250, 0))",
+                  opacity: 0.09,
+                }}
+              ></div>
+
+              <div
+                className="absolute w-[12rem] h-[10rem]"
+                style={{
+                  left: "36rem",
+                  top: "10rem",
+                  backgroundImage:
+                    "linear-gradient(-45deg, #acaafa, rgba(223, 226, 254, 0))",
+                  opacity: 0.1,
+                }}
+              ></div>
+            </div>
+
+            {/* Subtle Gradient Overlay */}
+            <div className="absolute inset-0 h-full w-full bg-gradient-to-br from-[#DFE2FE]/5 via-transparent to-[#7874F2]/10 overflow-x-hidden"></div>
+
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent h-px w-3/5 mx-auto"></div>
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent blur-sm h-2 w-3/5 mx-auto"></div>            <div
+              className="absolute -right-[0%] top-[10%] h-[300px] w-[400px] rounded-full bg-[#B1CBFA]/40 blur-[80px] animate-blob-slow overflow-x-hidden"
+              style={{ animationDelay: "0s" }}
+            ></div>
+            <div
+              className="absolute right-[30%] bottom-[10%] h-[250px] w-[150px] rounded-full bg-[#7874F2]/30 blur-[70px] animate-blob-fast overflow-x-hidden"
+              style={{ animationDelay: "4s" }}
+            ></div>
+            <div
+              className="absolute right-[20%] bottom-[20%] h-[180px] w-[100px] rounded-full bg-[#DFE2FE]/50 blur-[60px] animate-blob-medium overflow-x-hidden"
+              style={{ animationDelay: "3s" }}
+            ></div>
+
+            {/* Improved Grid Pattern */}
+            <div
+              className="absolute inset-0 h-full w-full"
+              style={{
+                backgroundImage:
+                  resolvedTheme === "dark"
+                    ? ` 
+                linear-gradient(to right, rgba(13, 16, 14, 0.8) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(142, 152, 245, 0.1) 0.5px, transparent 0.5px)`
+                    : `linear-gradient(to right, rgba(223, 226, 254, 0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(142, 152, 245, 0.1) 0.5px, transparent 0.5px)`,
+                backgroundSize: "12rem 10rem",
+              }}
+            >
+              <div className="absolute pointer-events-none inset-0 flex items-center justify-center dark:bg-zinc-950 bg-zinc-50 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+            </div>
+
+            {/* Static randomly highlighted grid cells */}
+            <div className="absolute inset-0 h-full w-full overflow-hidden">
+              <div
+                className="absolute w-[12rem] h-[10rem]"
+                style={{
+                  left: "12rem",
+                  top: "30rem",
+                  backgroundImage:
+                    "linear-gradient(270deg, #8E98F5, rgba(172, 170, 250, 0))",
+                  opacity: 0.09,
+                }}
+              ></div>
+
+              <div
+                className="absolute w-[12rem] h-[10rem]"
+                style={{
+                  left: "36rem",
+                  top: "10rem",
+                  backgroundImage:
+                    "linear-gradient(-45deg, #acaafa, rgba(223, 226, 254, 0))",
+                  opacity: 0.1,
+                }}
+              ></div>
+            </div>
+
+            {/* Subtle Gradient Overlay */}
+            <div className="absolute inset-0 h-full w-full bg-gradient-to-br from-[#DFE2FE]/5 via-transparent to-[#7874F2]/10 overflow-x-hidden"></div>
+
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent h-px w-3/5 mx-auto"></div>
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent blur-sm h-2 w-3/5 mx-auto"></div>
       {/* Main content */}
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex flex-col items-center text-center max-w-3xl mx-auto">

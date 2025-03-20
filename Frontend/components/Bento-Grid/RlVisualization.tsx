@@ -1,16 +1,24 @@
 import { ArrowUpRight, Brain } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 
 const RlVisualization = () => {
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [animationKey, setAnimationKey] = useState<number>(0);
-  
-  // Reset animation when hover state changes
+
+  const isMounted = useRef<boolean>(false);
+
   useEffect(() => {
-    if (isHovered) {
-      setAnimationKey(prev => prev + 1);
-    } 
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+  
+  useEffect(() => {
+    if (isHovered && isMounted.current) {
+      setAnimationKey((prev) => prev + 1);
+    }
   }, [isHovered]);
   
   return (
@@ -38,10 +46,10 @@ const RlVisualization = () => {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           animate={{
-            scale: isHovered ? 1.05 : 1
+            scale: isHovered ? 1.05 : 1,
           }}
           transition={{
-            scale: { duration: 0.4, ease: "easeOut" }
+            scale: { duration: 0.4, ease: "easeOut" },
           }}
         >
           {/* Background Grid */}
@@ -70,13 +78,13 @@ const RlVisualization = () => {
               r="8"
               fill="url(#nodeGradient)"
               initial={{ opacity: 0 }}
-              animate={{ 
+              animate={{
                 opacity: 1,
-                scale: isHovered ? 1.2 : 1
+                scale: isHovered ? 1.2 : 1,
               }}
-              transition={{ 
+              transition={{
                 opacity: { duration: 0.5, delay: i * 0.1 },
-                scale: { duration: 0.3 }
+                scale: { duration: 0.3 },
               }}
             />
           ))}
@@ -90,13 +98,13 @@ const RlVisualization = () => {
               r="8"
               fill="url(#nodeGradient)"
               initial={{ opacity: 0 }}
-              animate={{ 
+              animate={{
                 opacity: 1,
-                scale: isHovered ? 1.2 : 1
+                scale: isHovered ? 1.2 : 1,
               }}
-              transition={{ 
+              transition={{
                 opacity: { duration: 0.5, delay: 0.4 + i * 0.1 },
-                scale: { duration: 0.3 }
+                scale: { duration: 0.3 },
               }}
             />
           ))}
@@ -110,13 +118,13 @@ const RlVisualization = () => {
               r="8"
               fill="url(#nodeGradient)"
               initial={{ opacity: 0 }}
-              animate={{ 
+              animate={{
                 opacity: 1,
-                scale: isHovered ? 1.2 : 1
+                scale: isHovered ? 1.2 : 1,
               }}
-              transition={{ 
+              transition={{
                 opacity: { duration: 0.5, delay: 0.7 + i * 0.1 },
-                scale: { duration: 0.3 }
+                scale: { duration: 0.3 },
               }}
             />
           ))}
@@ -148,112 +156,117 @@ const RlVisualization = () => {
           )}
 
           {/* Animated Flow Connections Layer 1 to 2 */}
-          {isHovered && [40, 80, 120, 160].map((fromCy, i) =>
-            [60, 100, 140].map((toCy, j) => (
-              <motion.path
-                key={`${animationKey}-flow-c1-${i}-${j}`}
-                d={`M60,${fromCy} L150,${toCy}`}
-                stroke="#A7A4FF"
-                strokeWidth="1.5"
-                strokeOpacity="0.8"
-                filter="url(#glow)"
-                initial={{ pathLength: 0, pathOffset: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{
-                  duration: 0.5,
-                  delay: 0.1 + (i * 0.05) + (j * 0.03),
-                  ease: "easeOut"
-                }}
-              />
-            ))
-          )}
+          {isHovered &&
+            [40, 80, 120, 160].map((fromCy, i) =>
+              [60, 100, 140].map((toCy, j) => (
+                <motion.path
+                  key={`${animationKey}-flow-c1-${i}-${j}`}
+                  d={`M60,${fromCy} L150,${toCy}`}
+                  stroke="#A7A4FF"
+                  strokeWidth="1.5"
+                  strokeOpacity="0.8"
+                  filter="url(#glow)"
+                  initial={{ pathLength: 0, pathOffset: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{
+                    duration: 0.5,
+                    delay: 0.1 + i * 0.05 + j * 0.03,
+                    ease: "easeOut",
+                  }}
+                />
+              ))
+            )}
 
           {/* Animated Flow Connections Layer 2 to 3 */}
-          {isHovered && [60, 100, 140].map((fromCy, i) =>
-            [80, 120].map((toCy, j) => (
-              <motion.path
-                key={`${animationKey}-flow-c2-${i}-${j}`}
-                d={`M150,${fromCy} L240,${toCy}`}
-                stroke="#A7A4FF"
-                strokeWidth="1.5"
-                strokeOpacity="0.8"
-                filter="url(#glow)"
-                initial={{ pathLength: 0, pathOffset: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{
-                  duration: 0.5,
-                  delay: 0.4 + (i * 0.05) + (j * 0.03), // Delayed to start after first layer connections
-                  ease: "easeOut"
-                }}
-              />
-            ))
-          )}
+          {isHovered &&
+            [60, 100, 140].map((fromCy, i) =>
+              [80, 120].map((toCy, j) => (
+                <motion.path
+                  key={`${animationKey}-flow-c2-${i}-${j}`}
+                  d={`M150,${fromCy} L240,${toCy}`}
+                  stroke="#A7A4FF"
+                  strokeWidth="1.5"
+                  strokeOpacity="0.8"
+                  filter="url(#glow)"
+                  initial={{ pathLength: 0, pathOffset: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{
+                    duration: 0.5,
+                    delay: 0.4 + i * 0.05 + j * 0.03, // Delayed to start after first layer connections
+                    ease: "easeOut",
+                  }}
+                />
+              ))
+            )}
 
           {/* Bright Flash for Active Neurons */}
-          {isHovered && [40, 80, 120, 160].map((cy, i) => (
-            <motion.circle
-              key={`${animationKey}-flash-l1-${i}`}
-              cx="60"
-              cy={cy}
-              r="12"
-              fill="rgba(167, 164, 255, 0)"
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: [0, 0.7, 0],
-                scale: [0.8, 1.3, 1]
-              }}
-              transition={{ 
-                duration: 0.8,
-                delay: 0.1 + (i * 0.05),
-                times: [0, 0.2, 1]
-              }}
-            />
-          ))}
+          {isHovered &&
+            [40, 80, 120, 160].map((cy, i) => (
+              <motion.circle
+                key={`${animationKey}-flash-l1-${i}`}
+                cx="60"
+                cy={cy}
+                r="12"
+                fill="rgba(167, 164, 255, 0)"
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: [0, 0.7, 0],
+                  scale: [0.8, 1.3, 1],
+                }}
+                transition={{
+                  duration: 0.8,
+                  delay: 0.1 + i * 0.05,
+                  times: [0, 0.2, 1],
+                }}
+              />
+            ))}
 
           {/* Layer 2 Neuron Activation */}
-          {isHovered && [60, 100, 140].map((cy, i) => (
-            <motion.circle
-              key={`${animationKey}-flash-l2-${i}`}
-              cx="150"
-              cy={cy}
-              r="12"
-              fill="rgba(167, 164, 255, 0)"
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: [0, 0.7, 0],
-                scale: [0.8, 1.3, 1]
-              }}
-              transition={{ 
-                duration: 0.8,
-                delay: 0.4 + (i * 0.05),
-                times: [0, 0.2, 1]
-              }}
-            />
-          ))}
+          {isHovered &&
+            [60, 100, 140].map((cy, i) => (
+              <motion.circle
+                key={`${animationKey}-flash-l2-${i}`}
+                cx="150"
+                cy={cy}
+                r="12"
+                fill="rgba(167, 164, 255, 0)"
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: [0, 0.7, 0],
+                  scale: [0.8, 1.3, 1],
+                }}
+                transition={{
+                  duration: 0.8,
+                  delay: 0.4 + i * 0.05,
+                  times: [0, 0.2, 1],
+                }}
+              />
+            ))}
 
           {/* Layer 3 Neuron Activation */}
-          {isHovered && [80, 120].map((cy, i) => (
-            <motion.circle
-              key={`${animationKey}-flash-l3-${i}`}
-              cx="240"
-              cy={cy}
-              r="12"
-              fill="rgba(167, 164, 255, 0)"
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: [0, 0.7, 0],
-                scale: [0.8, 1.3, 1]
-              }}
-              transition={{ 
-                duration: 0.8,
-                delay: 0.7 + (i * 0.05),
-                times: [0, 0.2, 1]
-              }}
-            />
-          ))}
+          {isHovered &&
+            [80, 120].map((cy, i) => (
+              <motion.circle
+                key={`${animationKey}-flash-l3-${i}`}
+                cx="240"
+                cy={cy}
+                r="12"
+                fill="rgba(167, 164, 255, 0)"
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: [0, 0.7, 0],
+                  scale: [0.8, 1.3, 1],
+                }}
+                transition={{
+                  duration: 0.8,
+                  delay: 0.7 + i * 0.05,
+                  times: [0, 0.2, 1],
+                }}
+              />
+            ))}
 
           {/* Data Pulses */}
-          {[40, 80, 120, 160].map((cy, i) => (
+{/*           {[40, 80, 120, 160].map((cy, i) => (
             <motion.circle
               key={`pulse-${i}`}
               cx="60"
@@ -269,16 +282,18 @@ const RlVisualization = () => {
                   (i % 2 === 0 ? "80" : "120").toString(),
                   (i % 2 === 0 ? "80" : "120").toString(),
                 ],
-                filter: isHovered ? "drop-shadow(0 0 5px rgba(177, 203, 250, 0.8))" : "none"
+                filter: isHovered
+                  ? "drop-shadow(0 0 5px rgba(177, 203, 250, 0.8))"
+                  : "none",
               }}
               transition={{
                 duration: isHovered ? 1.5 : 2,
                 delay: 2 + i * 0.3,
                 repeat: Infinity,
-                repeatDelay: isHovered ? (i * 0.3 + 0.5) : (i * 0.5 + 1),
+                repeatDelay: isHovered ? i * 0.3 + 0.5 : i * 0.5 + 1,
               }}
             />
-          ))}
+          ))} */}
 
           {/* Gradient Definitions */}
           <defs>
@@ -291,9 +306,12 @@ const RlVisualization = () => {
               fy="0.5"
             >
               <stop offset="0%" stopColor={isHovered ? "#D6E5FF" : "#B1CBFA"} />
-              <stop offset="100%" stopColor={isHovered ? "#9490FF" : "#7874F2"} />
+              <stop
+                offset="100%"
+                stopColor={isHovered ? "#9490FF" : "#7874F2"}
+              />
             </radialGradient>
-            
+
             <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="2" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />

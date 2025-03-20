@@ -68,8 +68,8 @@ export function SignUpForm({
             toast.success("Account created successfully!");
             router.push("/authentication/sign-in");
           },
-          onError: (error) => {
-            toast.error("Something went wrong. Please try again later.");
+          onError: (ctx) => {
+            toast.error(ctx.error.message);
           },
         }
       );

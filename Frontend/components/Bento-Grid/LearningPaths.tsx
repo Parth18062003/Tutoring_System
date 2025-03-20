@@ -122,6 +122,7 @@ const LearningPaths = () => {
       className="relative col-span-1 md:col-span-2 row-span-2 group overflow-hidden rounded-3xl bg-gradient-to-br from-[#DFE2FE]/10 to-[#7874F2]/30 border border-white/10 p-6 md:p-8"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      
     >
       <div className="flex flex-col h-full justify-between">
         <div className="space-y-2">

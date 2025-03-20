@@ -30,6 +30,7 @@ const Nlp = () => {
       className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-[#7874F2]/20 to-[#DFE2FE]/5 border border-white/10 p-6 group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      
     >
       <div className="flex flex-col h-full justify-between">
         <div className="space-y-2">

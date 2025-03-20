@@ -9,6 +9,7 @@ const AdaptiveQuiz = () => {
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.6, delay: 0.5 }}
     className="relative overflow-hidden rounded-3xl bg-black/20 border border-white/10 p-6 group"
+    
   >
     <div className="space-y-2">
       <div className="inline-flex items-center rounded-full bg-[#7874F2]/20 px-2.5 py-0.5 text-xs font-medium text-[#B1CBFA]">

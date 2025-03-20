@@ -27,7 +27,6 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import SubmitButton from "../ui/submit-button";
 
-// Type for the form values based on the schema
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm({
@@ -77,7 +76,7 @@ export function LoginForm({
           onError: (cxt) => {
             setIsSubmitting(false);
             console.error("Login error:", cxt.error.message);
-            toast.error("Login failed. Please try again.");
+            toast.error(cxt.error.message);
             setError("Login failed. Please try again.");
           },
         }

@@ -31,6 +31,7 @@ const getUserDataPromise = cache(async (): Promise<UserDashboardData> => {
   });
 
   const userId = session?.user.id as string;
+  const email = session?.user.email as string;
 
   try {
     const userData = await prisma.user.findUniqueOrThrow({

@@ -31,7 +31,6 @@ export default async function RootLayout({
   const activeThemeValue = cookieStore.get("active_theme")?.value
   const fontSizeValue = cookieStore.get("font_size")?.value
   const fontSize = Number(fontSizeValue) || 100
-  console.log("Active theme",activeThemeValue)
   return (
     <html lang="en" suppressHydrationWarning>
       <body

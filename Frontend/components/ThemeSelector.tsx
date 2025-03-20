@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils"
 
 export function ThemeSelector() {
   const { activeTheme, setActiveTheme } = useThemeConfig()
-console.log("Active theme Color",activeTheme)
   return (
     <Select value={activeTheme} onValueChange={setActiveTheme}>
       <SelectTrigger className="w-32">
@@ -21,8 +20,8 @@ console.log("Active theme Color",activeTheme)
       </SelectTrigger>
       <SelectContent align="end">
         {THEMES.map((theme) => (
-          <SelectItem key={theme.name} value={theme.value}>
-           <div className={cn(`h-4 w-4 rounded-full`, `bg-${theme.value}-500`)} />
+          <SelectItem key={theme.name} value={theme.value} defaultValue={activeTheme}>
+           <div className={cn(`h-4 w-4 rounded-full`, `${theme.bg}`)} />
             {theme.name}
           </SelectItem>
         ))}

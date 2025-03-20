@@ -35,7 +35,7 @@ import { useFontSizeConfig } from "@/hooks/use-font-size";
 
 const appearanceFormSchema = z.object({
   theme: z.string(),
-  color: z.enum(["blue", "purple", "green", "orange", "red"]),
+  color: z.string(),
   fontSize: z.number().min(80).max(120),
   reducedMotion: z.boolean(),
   reducedTransparency: z.boolean(),
@@ -50,8 +50,8 @@ export function AppearanceSettings() {
     resolver: zodResolver(appearanceFormSchema),
     defaultValues: {
       theme: resolvedTheme,
-      color: "blue",
-      fontSize: 100,
+      color: activeTheme,
+      fontSize: fontSize,
       reducedMotion: false,
       reducedTransparency: false,
       highContrast: false,
@@ -72,6 +72,16 @@ export function AppearanceSettings() {
       toast.info(`Font size set to ${fontSize}%`);
       console.log("Font Size", fontSize);
     }
+  }
+
+  const handleReset = () => {
+    form.reset(
+      {
+        theme: resolvedTheme,
+        color: "blue",
+        fontSize: 100,
+      }
+    );
   }
 
   return (
@@ -271,7 +281,7 @@ export function AppearanceSettings() {
         </Form>
       </CardContent>
       <CardFooter className="text-xs flex justify-end space-x-2">
-        <Button variant="outline" type="button">
+        <Button variant="outline" type="button" onClick={handleReset}>
           Reset to Default
         </Button>
         <Button type="submit" onClick={form.handleSubmit(onSubmit)}>
