@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
   ChevronUp,
-  PlusCircle,
   BrainCircuit,
   Lightbulb,
   Puzzle,
@@ -15,8 +14,6 @@ import {
 } from "lucide-react";
 
 export default function Faq() {
-  const currentDate = "2025-03-05 15:47:09";
-  const currentUser = "Parth18062003";
 
   // FAQ categories
   const categories = [
@@ -142,12 +139,12 @@ export default function Faq() {
   };
 
   return (
-    <section className="py-20 md:py-28 bg-gradient-to-b from-white to-[#DFE2FE]/30">
+    <section className="py-20 md:py-28 bg-gradient-to-b from-white to-[#DFE2FE]/30 dark:from-zinc-950 dark:to-[#DFE2FE]/5">
       <div className="container px-4 md:px-6 mx-auto">
         {/* Decorative elements */}
         <div className="relative">
           <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#B1CBFA]/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-20 bottom-0 w-64 h-64 bg-[#7874F2]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-20 bottom-0 w-64 h-64 bg-[#7091E6]/10 rounded-full blur-3xl pointer-events-none" />
         </div>
 
         {/* Header */}
@@ -158,16 +155,16 @@ export default function Faq() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12 md:mb-16 relative z-10"
         >
-          <div className="inline-flex items-center px-3 py-1 mb-4 space-x-2 border rounded-full border-[#7874F2]/20 bg-white backdrop-blur-sm shadow-sm">
-            <span className="text-sm font-medium text-[#7874F2]">
+          <div className="inline-flex items-center px-3 py-1 mb-4 space-x-2 border rounded-full border-[#7091E6]/20 bg-white dark:bg-zinc-800/40 backdrop-blur-sm shadow-sm">
+            <span className="text-sm font-medium text-[#7091E6]">
               Frequently Asked Questions
             </span>
-            <BrainCircuit className="w-4 h-4 text-[#7874F2]" />
+            <BrainCircuit className="w-4 h-4 text-[#7091E6]" />
           </div>
-          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-[#7874F2] to-[#8E98F5]">
+          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-t from-[#3D52A0] dark:from-[#b3cdff] to-[#7091E6]">
             Have Questions? We Have Answers
           </h2>
-          <p className="mt-4 max-w-2xl mx-auto text-slate-700 text-lg">
+          <p className="mt-4 max-w-2xl mx-auto text-zinc-700 dark:text-zinc-300 text-lg">
             Everything you need to know about our Adaptive Intelligent Tutoring
             System
           </p>
@@ -189,8 +186,8 @@ export default function Faq() {
               transition={{ duration: 0.3, delay: 0.3 + i * 0.1 }}
               className={`px-5 py-2.5 rounded-full flex items-center gap-2 transition-all ${
                 activeCategory === category.id
-                  ? "bg-[#7874F2] text-white shadow-md"
-                  : "bg-white text-slate-700 border border-slate-200 hover:border-[#7874F2]/50 hover:bg-[#DFE2FE]/20"
+                  ? "bg-[#7091E6] dark:bg-[#3D52A0] text-white shadow-md"
+                  : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 hover:border-[#7091E6]/50 hover:bg-[#DFE2FE]/20"
               }`}
               onClick={() => setActiveCategory(category.id)}
             >
@@ -208,7 +205,7 @@ export default function Faq() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="max-w-3xl mx-auto"
         >
-          <div className="bg-white rounded-2xl shadow-md border border-[#DFE2FE] overflow-hidden relative z-10">
+          <div className="bg-white dark:bg-zinc-950 rounded-2xl shadow-md border border-[#DFE2FE] overflow-hidden relative z-10">
             {faqData
               .find((category) => category.category === activeCategory)
               ?.items.map((item, index) => {
@@ -219,18 +216,18 @@ export default function Faq() {
                   <div
                     key={questionId}
                     className={`border-b border-[#DFE2FE] last:border-0 ${
-                      isOpen ? "bg-[#DFE2FE]/10" : "bg-white"
+                      isOpen ? "bg-zinc-50 dark:bg-zinc-900/10" : "bg-white dark:bg-zinc-900"
                     }`}
                   >
                     <button
-                      className="w-full px-6 py-5 flex justify-between items-center text-left transition-colors hover:bg-[#DFE2FE]/5"
+                      className="w-full px-6 py-5 flex justify-between items-center text-left transition-colors hover:bg-zinc-800/5 dark:hover:bg-zinc-800/90"
                       onClick={() => toggleItem(questionId)}
                     >
-                      <h3 className="font-medium text-slate-800 pr-10">
+                      <h3 className="font-medium text-zinc-800 dark:text-zinc-200 pr-10">
                         {item.question}
                       </h3>
                       {isOpen ? (
-                        <ChevronUp className="w-5 h-5 text-[#7874F2] flex-shrink-0" />
+                        <ChevronUp className="w-5 h-5 text-[#7091E6] flex-shrink-0" />
                       ) : (
                         <ChevronDown className="w-5 h-5 text-[#8E98F5] flex-shrink-0" />
                       )}
@@ -245,7 +242,7 @@ export default function Faq() {
                           transition={{ duration: 0.3 }}
                           className="overflow-hidden"
                         >
-                          <div className="px-6 pb-5 text-slate-600 bg-gradient-to-r from-[#DFE2FE]/5 to-transparent">
+                          <div className="px-6 pb-5 text-zinc-600 dark:text-zinc-300 bg-gradient-to-r from-[#DFE2FE]/5 to-transparent">
                             <p>{item.answer}</p>
                           </div>
                         </motion.div>
@@ -265,23 +262,23 @@ export default function Faq() {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="mt-16 text-center relative z-10"
         >
-          <div className="p-8 max-w-2xl mx-auto rounded-2xl bg-gradient-to-r from-[#7874F2]/5 to-[#B1CBFA]/10 border border-[#DFE2FE]">
-            <div className="inline-flex justify-center items-center w-12 h-12 mb-4 rounded-full bg-[#DFE2FE] text-[#7874F2]">
+          <div className="p-8 max-w-2xl mx-auto rounded-2xl bg-gradient-to-r from-[#7091E6]/5 to-[#B1CBFA]/10 dark:from-zinc-800/80 dark:to-zinc-800/30 border border-[#fedfdf]">
+            <div className="inline-flex justify-center items-center w-12 h-12 mb-4 rounded-full bg-[#DFE2FE] text-[#7091E6]">
               <Zap className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">
+            <h3 className="text-xl font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
               Still have questions?
             </h3>
-            <p className="text-slate-600 mb-6">
+            <p className="text-zinc-600 dark:text-zinc-300 mb-6">
               Our support team is ready to help with any specific questions you
               might have about our platform.
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
-              <button className="px-5 py-2.5 font-medium text-white rounded-lg bg-gradient-to-r from-[#7874F2] to-[#8E98F5] hover:shadow-md transition-shadow flex items-center gap-2">
+              <button className="px-5 py-2.5 font-medium text-white rounded-lg bg-gradient-to-r from-[#7091E6] to-[#3D52A0] hover:shadow-md transition-shadow flex items-center gap-2">
                 <Blocks className="w-4 h-4" />
                 Schedule Demo
               </button>
-              <button className="px-5 py-2.5 font-medium border border-slate-200 rounded-lg text-slate-800 hover:border-[#7874F2]/50 hover:bg-[#DFE2FE]/20 transition-colors">
+              <button className="px-5 py-2.5 font-medium border border-zinc-200 rounded-lg text-zinc-800 dark:text-zinc-200 hover:border-[#7091E6]/50 hover:bg-[#DFE2FE]/20 dark:hover:bg-[#3D52A0]/40 transition-colors">
                 Contact Support
               </button>
             </div>

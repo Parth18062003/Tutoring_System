@@ -70,7 +70,7 @@ export default function LearningJourney() {
   ];
 
   return (
-    <main className="py-20 md:py-28 bg-gradient-to-b from-zinc-100 to-[#DFE2FE]/20 overflow-hidden">
+    <main className="py-20 md:py-28 bg-gradient-to-b from-zinc-100 to-[#DFE2FE]/20 dark:from-zinc-950 dark:to-[#DFE2FE]/5 overflow-hidden">
       <div className="container px-4 md:px-6 mx-auto relative">
 
 
@@ -82,7 +82,7 @@ export default function LearningJourney() {
             transition={{ duration: 0.7 }}
             className="text-center mb-16 md:mb-24"
           >
-            <div className="inline-flex items-center px-3 py-1 mb-4 space-x-2 border rounded-full border-[#7091e6]/20 bg-white/80 backdrop-blur-sm shadow-sm">
+            <div className="inline-flex items-center px-3 py-1 mb-4 space-x-2 border rounded-full border-[#7091e6]/20 bg-white/80 dark:bg-zinc-800/40 backdrop-blur-sm shadow-sm">
               <motion.div
                 initial={{ rotate: 0 }}
                 animate={{ rotate: 360 }}
@@ -94,10 +94,10 @@ export default function LearningJourney() {
                 Your Learning Journey
               </span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-[#7091e6] to-[#9eb5ef]">
+            <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-t from-[#3D52A0] dark:from-[#b3cdff] to-[#7091E6]">
               How BrainWave Adapts to You
             </h1>
-            <p className="mt-4 max-w-2xl mx-auto text-slate-600 text-lg">
+            <p className="mt-4 max-w-2xl mx-auto text-zinc-600 dark:text-zinc-300 text-lg">
               Experience a revolutionary approach to learning that evolves with
               your unique cognitive profile
             </p>
@@ -111,9 +111,9 @@ export default function LearningJourney() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="bg-white rounded-2xl p-8 shadow-xl border border-[#DFE2FE]"
+            className="bg-white dark:bg-zinc-900/20 rounded-2xl p-8 shadow-xl border border-[#DFE2FE]"
           >
-            <div className="absolute top-0 left-1/2 h-full w-0.5 bg-gradient-to-b from-transparent via-[#7091e6]/30 to-transparent transform -translate-x-1/2 -z-0" />
+            <div className="absolute top-0 left-1/2 h-full w-0.5 bg-gradient-to-b from-transparent via-[#7091e6]/30 to-transparent transform -tranzinc-x-1/2 -z-0" />
             <nav
               className="space-y-6 relative z-10"
               aria-label="Learning journey steps"
@@ -127,8 +127,8 @@ export default function LearningJourney() {
                   transition={{ duration: 0.5, delay: 0.3 + step.id * 0.1 }}
                   className={`p-5 rounded-xl cursor-pointer transition-all duration-300 w-full text-left ${
                     activeStep === step.id
-                      ? "bg-[#7091e6]/10 border border-[#7091e6]/30 shadow-md"
-                      : "hover:bg-slate-50 border border-transparent"
+                      ? "bg-[#7091e6]/10 dark:bg-[#7091e6]/5 border border-[#7091e6]/30 shadow-md"
+                      : "hover:bg-zinc-50 dark:hover:bg-zinc-950  border border-transparent"
                   }`}
                   onClick={() => setActiveStep(step.id)}
                   aria-pressed={activeStep === step.id}
@@ -138,7 +138,7 @@ export default function LearningJourney() {
                       className={`rounded-lg p-3 ${
                         activeStep === step.id
                           ? "bg-[#7091e6] text-white"
-                          : "bg-slate-100 text-slate-400"
+                          : "bg-zinc-100 dark:bg-zinc-800/30 text-zinc-400 dark:text-zinc-200"
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -164,13 +164,13 @@ export default function LearningJourney() {
                       <h3
                         className={`font-semibold text-lg mb-1 ${
                           activeStep === step.id
-                            ? "text-[#7091e6]"
-                            : "text-slate-700"
+                            ? "text-[#7091e6] dark:text-[#b3cdff]"
+                            : "text-zinc-700 dark:text-zinc-200"
                         }`}
                       >
                         {step.title}
                       </h3>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
                         {step.description}
                       </p>
                       {activeStep === step.id && (
@@ -179,10 +179,10 @@ export default function LearningJourney() {
                           animate={{ opacity: 1, y: 0 }}
                           className="mt-3 flex items-center gap-2"
                         >
-                          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#7091e6]/20 text-[#7091e6]">
+                          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#7091e6]/20 dark:bg-[#7091e6]/40 text-[#b3cdff]">
                             {step.stats}
                           </span>
-                          <ArrowRight className="w-4 h-4 text-[#7091e6]" />
+                          <ArrowRight className="w-4 h-4 text-[#7091e6] dark:text-[#b3cdff]" />
                         </motion.div>
                       )}
                     </div>
@@ -199,7 +199,7 @@ export default function LearningJourney() {
                   whileHover={{ scale: 1.2 }}
                   whileTap={{ scale: 0.9 }}
                   className={`w-3 h-3 rounded-full ${
-                    activeStep === step.id ? "bg-[#7091e6]" : "bg-slate-200"
+                    activeStep === step.id ? "bg-[#7091e6]" : "bg-zinc-200 dark:bg-zinc-600"
                   }`}
                   onClick={() => setActiveStep(step.id)}
                   aria-selected={activeStep === step.id}
@@ -221,7 +221,7 @@ export default function LearningJourney() {
                 transition={{ duration: 0.5 }}
                 className="relative rounded-2xl overflow-hidden shadow-2xl border-8 border-white perspective-1000"
               >
-                <div className="w-full h-full bg-gradient-to-br from-[#7091e6] to-[#9eb5ef] flex items-center justify-center p-8 relative">
+                <div className="w-full h-full bg-gradient-to-br from-[#7091e6] to-[#9eb5ef] dark:to-[#3D52A0] flex items-center justify-center p-8 relative">
                   {/* Dynamic background elements */}
                   <div className="absolute inset-0 overflow-hidden">
                     <motion.div
@@ -1042,7 +1042,7 @@ export default function LearningJourney() {
                   transition={{ delay: 1, duration: 0.3 }}
                   className="overflow-hidden whitespace-nowrap"
                 >
-                  <span className="text-xs font-medium text-slate-700">
+                  <span className="text-xs font-medium text-zinc-700">
                     Your progress:
                   </span>
                   <span className="text-xs font-bold text-[#7091e6]">67%</span>

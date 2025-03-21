@@ -89,15 +89,15 @@ export default function BentoGrid() {
         <div className="relative -mx-2.5 flex -bottom-1 -mt-10">
           <svg
             viewBox="0 0 64 48"
-            className="w-16 flex-none fill-zinc-100"
+            className="w-16 flex-none fill-zinc-100 dark:fill-zinc-950"
             aria-hidden="true"
           >
             <path d="M51.657 2.343 12.343 41.657A8 8 0 0 1 6.686 44H0v4h64V0h-6.686a8 8 0 0 0-5.657 2.343Z"></path>
           </svg>
-          <div className="-mx-px flex-auto bg-zinc-100"></div>
+          <div className="-mx-px flex-auto bg-zinc-100 dark:bg-zinc-950"></div>
           <svg
             viewBox="0 0 64 48"
-            className="w-16 flex-none fill-zinc-100"
+            className="w-16 flex-none fill-zinc-100 dark:fill-zinc-950"
             aria-hidden="true"
           >
             <path d="m12.343 2.343 39.314 39.314A8 8 0 0 0 57.314 44H64v4H0V0h6.686a8 8 0 0 1 5.657 2.343Z"></path>

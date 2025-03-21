@@ -16,7 +16,7 @@ import {
 
 export default function Footer() {
   return (
-    <footer className="bg-gradient-to-b from-white to-[#DFE2FE]/30 border-t border-[#b3baf9]">
+    <footer className="bg-gradient-to-b from-white to-[#DFE2FE]/30 dark:from-zinc-950 dark:to-[#DFE2FE]/20 border-t border-[#b3baf9]">
       <div className="container px-4 md:px-6 mx-auto">
         {/* Main Footer Content */}
         <div className="py-12 md:py-16">
@@ -30,14 +30,14 @@ export default function Footer() {
               className="col-span-2 lg:col-span-2"
             >
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-[#7874F2] to-[#8E98F5] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-[#7091e6] to-[#3D52A0] flex items-center justify-center">
                   <BrainCircuit className="h-6 w-6 text-white" />
                 </div>
-                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#7874F2] to-[#8E98F5]">
+                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-t from-[#3D52A0] dark:from-[#b3cdff] to-[#7091E6]">
                   Brain Wave
                 </span>
               </div>
-              <p className="text-slate-600 mb-6 max-w-md">
+              <p className="text-zinc-600 dark:text-zinc-300 mb-6 max-w-md">
                 Our AI-powered tutoring platform adapts to your unique learning
                 style, providing personalized education that helps you master
                 any subject at your own pace.
@@ -46,7 +46,7 @@ export default function Footer() {
                 <a
                   href="#"
                   aria-label="Facebook"
-                  className="w-10 h-10 rounded-full bg-white border border-[#DFE2FE] flex items-center justify-center text-[#7874F2] hover:bg-[#DFE2FE]/30 transition-colors"
+                  className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 border border-[#DFE2FE] dark:border-[#DFE2FE]/20 flex items-center justify-center text-[#5d76c4] hover:text-[#3D52A0] hover:bg-[#5d76c4]/30 dark:hover:bg-[#5d76c4]/30 transition-colors"
                 >
                   <Facebook className="h-5 w-5" />
                   <span className="sr-only">Facebook</span>
@@ -54,7 +54,7 @@ export default function Footer() {
                 <a
                   href="#"
                   aria-label="Twitter"
-                  className="w-10 h-10 rounded-full bg-white border border-[#DFE2FE] flex items-center justify-center text-[#7874F2] hover:bg-[#DFE2FE]/30 transition-colors"
+                  className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 border border-[#DFE2FE] dark:border-[#DFE2FE]/20 flex items-center justify-center text-[#5d76c4] hover:text-[#3D52A0] hover:bg-[#5d76c4]/30 dark:hover:bg-[#5d76c4]/30 transition-colors"
                 >
                   <Twitter className="h-5 w-5" />
                   <span className="sr-only">Twitter</span>
@@ -62,7 +62,7 @@ export default function Footer() {
                 <a
                   href="#"
                   aria-label="Instagram"
-                  className="w-10 h-10 rounded-full bg-white border border-[#DFE2FE] flex items-center justify-center text-[#7874F2] hover:bg-[#DFE2FE]/30 transition-colors"
+                  className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 border border-[#DFE2FE] dark:border-[#DFE2FE]/20 flex items-center justify-center text-[#5d76c4] hover:text-[#3D52A0] hover:bg-[#5d76c4]/30 dark:hover:bg-[#5d76c4]/30 transition-colors"
                 >
                   <Instagram className="h-5 w-5" />
                   <span className="sr-only">Instagram</span>
@@ -77,14 +77,14 @@ export default function Footer() {
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: 0.2 }}
             >
-              <h3 className="text-base font-semibold text-slate-800 mb-4">
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-50 mb-4">
                 Platform
               </h3>
               <ul className="space-y-3">
                 <li>
                   <Link
                     href="#features"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors inline-flex items-center"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors inline-flex items-center"
                   >
                     Features
                     <ArrowUpRight className="ml-1 h-3 w-3" />
@@ -93,7 +93,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="#pricing"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors inline-flex items-center"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors inline-flex items-center"
                   >
                     Pricing
                   </Link>
@@ -101,7 +101,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="#testimonials"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Testimonials
                   </Link>
@@ -109,7 +109,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="#curriculum"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Curriculum
                   </Link>
@@ -117,12 +117,9 @@ export default function Footer() {
                 <li>
                   <Link
                     href="#ai-features"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors inline-flex items-center"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors inline-flex items-center"
                   >
                     AI Features
-                    <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-[#DFE2FE] text-[#7874F2]">
-                      New
-                    </span>
                   </Link>
                 </li>
               </ul>
@@ -135,14 +132,14 @@ export default function Footer() {
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: 0.3 }}
             >
-              <h3 className="text-base font-semibold text-slate-800 mb-4">
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-50 mb-4">
                 Company
               </h3>
               <ul className="space-y-3">
                 <li>
                   <Link
                     href="/about"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     About Us
                   </Link>
@@ -150,7 +147,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="/blog"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Blog
                   </Link>
@@ -158,18 +155,15 @@ export default function Footer() {
                 <li>
                   <Link
                     href="/careers"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors inline-flex items-center"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors inline-flex items-center"
                   >
                     Careers
-                    <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-[#DFE2FE] text-[#7874F2]">
-                      Hiring
-                    </span>
                   </Link>
                 </li>
                 <li>
                   <Link
                     href="/research"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Research
                   </Link>
@@ -177,7 +171,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="/contact"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Contact
                   </Link>
@@ -193,14 +187,14 @@ export default function Footer() {
               transition={{ duration: 0.7, delay: 0.4 }}
               className="col-span-2 md:col-span-1"
             >
-              <h3 className="text-base font-semibold text-slate-800 mb-4">
+              <h3 className="text-base font-semibold text-zinc-800 dark:text-zinc-50 mb-4">
                 Support
               </h3>
               <ul className="space-y-3">
                 <li>
                   <Link
                     href="/help"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Help Center
                   </Link>
@@ -208,7 +202,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="/documentation"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Documentation
                   </Link>
@@ -216,7 +210,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="/community"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Community
                   </Link>
@@ -224,7 +218,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="/status"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors inline-flex items-center"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors inline-flex items-center"
                   >
                     System Status
                     <div className="ml-2 w-2 h-2 rounded-full bg-green-500"></div>
@@ -233,7 +227,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="/feedback"
-                    className="text-slate-600 hover:text-[#7874F2] transition-colors"
+                    className="text-zinc-600 hover:text-[#7091E6] dark:text-zinc-100 dark:hover:text-[#b3cdff] hover:font-semibold transition-colors"
                   >
                     Submit Feedback
                   </Link>
@@ -246,33 +240,33 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="py-6 border-t border-[#DFE2FE] text-center md:text-left">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm text-slate-500">
+            <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm text-zinc-500 dark:text-zinc-300">
               <Link
                 href="/privacy"
-                className="hover:text-[#7874F2] transition-colors"
+                className="hover:text-[#7091E6] transition-colors"
               >
                 Privacy Policy
               </Link>
               <Link
                 href="/terms"
-                className="hover:text-[#7874F2] transition-colors"
+                className="hover:text-[#7091E6] transition-colors"
               >
                 Terms of Service
               </Link>
               <Link
                 href="/cookies"
-                className="hover:text-[#7874F2] transition-colors"
+                className="hover:text-[#7091E6] transition-colors"
               >
                 Cookie Policy
               </Link>
               <Link
                 href="/accessibility"
-                className="hover:text-[#7874F2] transition-colors"
+                className="hover:text-[#7091E6] transition-colors"
               >
                 Accessibility
               </Link>
             </div>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-zinc-500 dark:text-zinc-300">
               © 2025 Brain Wave AI. All rights reserved.
             </div>
           </div>

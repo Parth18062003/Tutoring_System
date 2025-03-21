@@ -109,11 +109,6 @@
   background: var(--primary);
 }
 
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-  background: var(--primary-foreground); 
-}
-
 
 @theme inline {
   --color-background: var(--background);

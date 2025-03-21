@@ -27,19 +27,19 @@ export default function CallToAction() {
   const currentUser = "Parth18062003";
 
   return (
-    <section className="py-20 md:p-24 overflow-hidden bg-gradient-to-b from-white to-[#DFE2FE]/20 relative">
+    <section className="py-20 md:p-24 overflow-hidden bg-gradient-to-b from-white to-[#DFE2FE]/20 dark:from-zinc-950 dark:to-[#DFE2FE]/10 relative">
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-24 right-0 w-96 h-96 rounded-full bg-[#B1CBFA]/10 blur-3xl" />
-        <div className="absolute -bottom-12 -left-12 w-72 h-72 rounded-full bg-[#7874F2]/10 blur-3xl" />
+        <div className="absolute -bottom-12 -left-12 w-72 h-72 rounded-full bg-[#7091E6]/10 blur-3xl" />
         <div className="absolute top-1/3 left-1/4 w-4 h-4 rounded-full bg-[#8E98F5]/30" />
-        <div className="absolute top-2/3 right-1/3 w-6 h-6 rounded-full bg-[#7874F2]/20" />
+        <div className="absolute top-2/3 right-1/3 w-6 h-6 rounded-full bg-[#7091E6]/20" />
 
         {/* Floating particles */}
         {Array.from({ length: 8 }).map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-1 h-1 rounded-full bg-[#7874F2]"
+            className="absolute w-1 h-1 rounded-full bg-[#7091E6]"
             style={{
               top: `${15 + Math.random() * 70}%`,
               left: `${10 + Math.random() * 80}%`,
@@ -67,22 +67,22 @@ export default function CallToAction() {
             transition={{ duration: 0.7 }}
             className="space-y-6"
           >
-            <div className="inline-flex items-center px-3 py-1 space-x-2 border rounded-full border-[#7874F2]/20 bg-white backdrop-blur-sm shadow-sm">
-              <Sparkles className="w-4 h-4 text-[#7874F2]" />
-              <span className="text-sm font-medium text-[#7874F2]">
+            <div className="inline-flex items-center px-3 py-1 space-x-2 border rounded-full border-[#7091E6]/20 bg-white dark:bg-zinc-800/40 backdrop-blur-sm shadow-sm">
+              <Sparkles className="w-4 h-4 text-[#7091E6]" />
+              <span className="text-sm font-medium text-[#7091E6]">
                 Limited Time Offer
               </span>
             </div>
 
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
               Start your{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#7874F2] to-[#8E98F5]">
+              <span className="bg-clip-text text-transparent bg-gradient-to-t from-[#3D52A0] dark:from-[#b3cdff] to-[#7091E6]">
                 intelligent learning
               </span>{" "}
               journey today
             </h2>
 
-            <p className="text-lg md:text-xl text-slate-700 max-w-lg">
+            <p className="text-lg md:text-xl text-zinc-700 dark:text-zinc-200 max-w-lg">
               Join thousands of students who've already experienced the power of
               AI-enhanced personalized education. Transform the way you learn
               forever.
@@ -92,15 +92,15 @@ export default function CallToAction() {
               {/* Feature list */}
               {[
                 {
-                  icon: <BrainCircuit className="w-5 h-5 text-[#7874F2]" />,
+                  icon: <BrainCircuit className="w-5 h-5 text-[#7091E6]" />,
                   text: "Personalized learning paths uniquely tailored to you",
                 },
                 {
-                  icon: <Zap className="w-5 h-5 text-[#7874F2]" />,
+                  icon: <Zap className="w-5 h-5 text-[#7091E6]" />,
                   text: "Learn up to 3x faster with adaptive difficulty scaling",
                 },
                 {
-                  icon: <Brain className="w-5 h-5 text-[#7874F2]" />,
+                  icon: <Brain className="w-5 h-5 text-[#7091E6]" />,
                   text: "Real-time feedback and guidance from AI tutors",
                 },
               ].map((feature, i) => (
@@ -112,10 +112,10 @@ export default function CallToAction() {
                   transition={{ duration: 0.4, delay: 0.4 + i * 0.1 }}
                   className="flex items-start gap-3"
                 >
-                  <div className="rounded-full p-1.5 bg-[#DFE2FE]/50 flex-shrink-0">
+                  <div className="rounded-full p-1.5 bg-[#DFE2FE]/50 dark:bg-[#DFE2FE]/90 flex-shrink-0">
                     {feature.icon}
                   </div>
-                  <p className="text-slate-700">{feature.text}</p>
+                  <p className="text-zinc-700 dark:text-zinc-300">{feature.text}</p>
                 </motion.div>
               ))}
             </div>
@@ -128,11 +128,11 @@ export default function CallToAction() {
               className="pt-2"
             >
               <div className="flex flex-col sm:flex-row gap-4">
-                <button className="px-6 py-3 font-medium text-white transition-all rounded-lg shadow-lg bg-gradient-to-r from-[#7874F2] to-[#8E98F5] hover:shadow-xl hover:scale-105 hover:from-[#6b67e5] hover:to-[#807cf0] shadow-[#8E98F5]/25 flex items-center justify-center gap-2">
+                <button className="px-6 py-3 font-medium text-white transition-all rounded-lg shadow-lg bg-gradient-to-b from-[#7091E6] to-[#3D52A0] hover:shadow-xl hover:scale-105 shadow-[#8E98F5]/25 flex items-center justify-center gap-2">
                   Start Free Trial
                   <ArrowRight className="w-5 h-5" />
                 </button>
-                <button className="px-6 py-3 font-medium transition-all border rounded-lg text-slate-800 hover:text-[#7874F2] border-slate-200 hover:border-[#7874F2]/50 hover:shadow-md hover:bg-white/80 flex items-center justify-center gap-2">
+                <button className="px-6 py-3 font-medium transition-all border rounded-lg text-zinc-800 dark:text-zinc-200 border-slate-200 hover:border-[#7091E6]/50 hover:shadow-md flex items-center justify-center gap-2">
                   Schedule Demo
                 </button>
               </div>
@@ -155,8 +155,8 @@ export default function CallToAction() {
                     </div>
                   ))}
                 </div>
-                <div className="text-sm text-slate-700">
-                  <span className="font-semibold text-[#7874F2]">4,500+</span>{" "}
+                <div className="text-sm text-zinc-700 dark:text-zinc-300">
+                  <span className="font-semibold text-[#7091E6] dark:text-[#b3cdff]">4,500+</span>{" "}
                   students enrolled this month
                 </div>
               </div>
@@ -174,8 +174,8 @@ export default function CallToAction() {
             <div className="relative flex items-center justify-center">
               {/* Central sphere with glow */}
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-[#7874F2] blur-2xl opacity-20 scale-150" />
-                <div className="w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-[#B1CBFA] to-[#7874F2] flex items-center justify-center relative z-10 shadow-xl">
+                <div className="absolute inset-0 rounded-full bg-[#7091E6] blur-2xl opacity-20 scale-150" />
+                <div className="w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-[#B1CBFA] to-[#7091E6] flex items-center justify-center relative z-10 shadow-xl">
                   <div className="w-36 h-36 md:w-48 md:h-48 rounded-full border-8 border-white/30 flex items-center justify-center">
                     <BrainCircuit className="w-16 h-16 md:w-24 md:h-24 text-white" />
                   </div>
@@ -217,7 +217,7 @@ export default function CallToAction() {
                     >
                       {i === 0 && (
                         <Brain
-                          className="text-[#7874F2]"
+                          className="text-[#7091E6]"
                           style={{
                             width: iconSize * 0.6,
                             height: iconSize * 0.6,
@@ -267,7 +267,7 @@ export default function CallToAction() {
             >
               <div className="bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-[#DFE2FE]">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#B1CBFA] to-[#7874F2] flex items-center justify-center text-white font-semibold">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#B1CBFA] to-[#7091E6] flex items-center justify-center text-white font-semibold">
                     {currentUser.charAt(0)}
                   </div>
                   <div>
@@ -291,7 +291,7 @@ export default function CallToAction() {
                   </div>
                   <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                     <motion.div
-                      className="h-full bg-gradient-to-r from-[#8E98F5] to-[#7874F2]"
+                      className="h-full bg-gradient-to-r from-[#8E98F5] to-[#7091E6]"
                       initial={{ width: 0 }}
                       whileInView={{ width: "67%" }}
                       viewport={{ once: true }}
@@ -300,7 +300,7 @@ export default function CallToAction() {
                   </div>
                   <div className="mt-2 text-xs text-slate-600">
                     Continue where you left off →{" "}
-                    <span className="text-[#7874F2] font-medium">
+                    <span className="text-[#7091E6] font-medium">
                       Advanced Algorithms
                     </span>
                   </div>
