@@ -596,148 +596,354 @@ def update_student_state_history(state: StudentState, topic_name: str, strategy_
          state.current_topic_idx_persistent = -1
 
 
+#def generate_prompt_template(
+#    content_type: str,
+#    strategy: TeachingStrategies,
+#    topic_full_name: str,
+#    effective_difficulty: float, # Calculated difficulty (0-1)
+#    mastery: float, # Current mastery (0-1)
+#    grade: int,
+#    learning_style_prefs: Dict[str, float],
+#    request_details: ContentRequest,
+#    difficulty_choice: DifficultyLevel,
+#    scaffolding_choice: ScaffoldingLevel,
+#    feedback_choice: FeedbackType,
+#    length_choice: ContentLength
+#) -> str:
+#    """Generates a detailed prompt for the LLM based on RL actions and student state."""
+#
+#    # Deconstruct topic name
+#    parts = topic_full_name.split('-', 2) # Split max 2 times
+#    subject = parts[0] if len(parts) > 0 else "General"
+#    subsubject_or_topic = parts[1] if len(parts) > 1 else topic_full_name
+#    specific_topic = parts[2] if len(parts) > 2 else subsubject_or_topic
+#    specific_topic = specific_topic.replace('-', ' ') # Make more readable
+#
+#    # Get dominant learning style
+#    primary_style = "balanced"
+#    if learning_style_prefs:
+#         primary_style_name = max(learning_style_prefs.items(), key=lambda item: item[1])[0]
+#         # Map name back to enum if needed, or just use capitalized name
+#         primary_style = primary_style_name.capitalize()
+#
+#
+#    # Descriptions based on state/action
+#    mastery_desc = "new to this topic or struggling" if mastery < 0.3 else "developing understanding" if mastery < 0.7 else "quite familiar"
+#    difficulty_desc = difficulty_choice.name.lower() # Use RL choice name
+#    scaffolding_desc = {
+#        ScaffoldingLevel.NONE: "Provide standard content.",
+#        ScaffoldingLevel.HINTS: "Include hints where appropriate (e.g., in quizzes).",
+#        ScaffoldingLevel.GUIDANCE: "Provide step-by-step guidance or worked examples prominently."
+#    }[scaffolding_choice]
+#    length_desc = length_choice.name.lower() # concise, standard, detailed
+#    strategy_name_cap = strategy.name.capitalize()
+#
+#    # --- Base Prompt ---
+#    prompt = f"""Act as an expert {grade}th grade NCERT curriculum tutor generating educational content.
+#
+#**Student Context:**
+#*   Grade: {grade}
+#*   Topic: {specific_topic} (Subject: {subject})
+#*   Mastery Level: {mastery_desc} (Score: {mastery:.2f})
+#*   Primary Learning Style: {primary_style}
+#*   Requested Content Type: {content_type.capitalize()}
+#
+#**Instructional Plan (from AI Tutor):**
+#*   Teaching Strategy: Use a **{strategy_name_cap}** approach.
+#*   Target Difficulty: Aim for a **{difficulty_desc}** level relative to the student's mastery (Effective Difficulty Score: {effective_difficulty:.2f}).
+#*   Pacing/Length: Keep the content **{length_desc}**.
+#*   Scaffolding: {scaffolding_desc}
+#
+#**Task:**
+#Generate the requested "{content_type.capitalize()}" content for "{specific_topic}".
+#Ensure it's engaging, accurate, suitable for the student's grade and mastery, formatted clearly using Markdown, and adheres to the Instructional Plan above.
+#"""
+#
+#    # --- Content Type Specific Instructions ---
+#    # Incorporate strategy, scaffolding, length, feedback type where relevant
+#    if content_type == "lesson":
+#        prompt += f"""
+#**Lesson Requirements:**
+#1.  **Introduction:** Briefly state topic & learning objectives ({length_desc}).
+#2.  **Core Content:** Explain key concepts using the **{strategy_name_cap}** approach. {scaffolding_desc} Adapt for {primary_style} learning. Use {grade}th grade examples. Adhere to **{length_desc}** pacing.
+#3.  **Check-in:** Include 1-2 simple questions or a reflection prompt.
+#4.  **Summary:** Briefly recap main points ({length_desc})."""
+#    elif content_type == "quiz" or content_type == "assessment":
+#        num_questions = 3 if length_choice == ContentLength.CONCISE else 5 if length_choice == ContentLength.STANDARD else 7
+#        feedback_instr = { # Instructions based on feedback type choice
+#            FeedbackType.CORRECTIVE: "Provide only the correct answer.",
+#            FeedbackType.HINT: "Provide the correct answer and a brief hint towards the solution.",
+#            FeedbackType.ELABORATED: "Provide the correct answer and a clear, concise explanation.",
+#            FeedbackType.SOCRATIC: "Provide the correct answer, and ask a short Socratic question to prompt deeper thinking about why it's correct."
+#        }[feedback_choice]
+#        scaffold_instr = "Include optional hints for challenging questions." if scaffolding_choice == ScaffoldingLevel.HINTS else ""
+#
+#        prompt += f"""
+#**Quiz/Assessment Requirements:**
+#*   Generate {num_questions} questions for "{specific_topic}".
+#*   Target difficulty should be **{difficulty_desc}** relative to the student's mastery ({mastery_desc}).
+#*   Include a mix of question types (e.g., Multiple Choice, Short Answer).
+#*   {scaffold_instr}
+#*   For each question, provide the answer details following this feedback style: **{feedback_instr}**
+#
+#**Format:**
+#**1. [Question Text]**
+#   (A) [Option A] ... (if applicable)
+#   **Answer Details:** [Based on feedback style: Answer, optional Hint/Explanation/Socratic Question]
+#---
+#(Repeat for other questions)"""
+#    elif content_type == "flashcard":
+#        num_flashcards = 3 if length_choice == ContentLength.CONCISE else 5
+#        prompt += f"""
+#**Flashcard Requirements:**
+#*   Generate {num_flashcards} flashcards for key concepts/terms in "{specific_topic}" suitable for {mastery_desc}.
+#*   Front should be a question or term, Back should be a concise answer/definition. Keep it **{length_desc}**.
+#
+#**Format:**
+#**Flashcard 1:**
+#**Front:** [Term or Question]
+#**Back:** [Concise Answer/Definition]
+#---
+#(Repeat {num_flashcards} times)"""
+#    elif content_type == "cheatsheet":
+#        prompt += f"""
+#**Cheatsheet Requirements:**
+#*   Create a concise summary sheet ({length_desc}) for "{specific_topic}".
+#*   Include key definitions, formulas, steps, or important facts.
+#*   Use headings, bullet points, and bold text for easy scanning. Focus on quick reference suitable for {mastery_desc}."""
+#    elif content_type == "explanation":
+#        prompt += f"""
+#**Explanation Requirements:**
+#*   Provide a clear explanation of "{request_details.subtopic or specific_topic}".
+#*   Use the **{strategy_name_cap}** approach. {scaffolding_desc}
+#*   Target difficulty: **{difficulty_desc}**. Keep it **{length_desc}**.
+#*   Address potential confusion points based on the student context ({mastery_desc})."""
+#    elif content_type == "feedback":
+#         feedback_instr = {
+#            FeedbackType.CORRECTIVE: "Confirm if the input is correct or incorrect. If incorrect, state the correct answer briefly.",
+#            FeedbackType.HINT: "Acknowledge the input. If incorrect, provide a hint towards the correct solution/concept.",
+#            FeedbackType.ELABORATED: "Acknowledge the input. Explain why it's correct or incorrect, referencing the key concepts of '{specific_topic}'.",
+#            FeedbackType.SOCRATIC: "Acknowledge the input. Ask a guiding question related to '{specific_topic}' to help the student reflect on their answer (correct or incorrect)."
+#        }[feedback_choice]
+#         prompt += f"""
+#**Feedback Requirements:**
+#*   Student Context: Grade {grade}, Topic '{specific_topic}', Mastery {mastery_desc}.
+#*   Student Input Provided: `{request_details.user_input or "[No input provided]"}`
+#*   Task: Provide constructive feedback on the student's input using this style: **{feedback_instr}**
+#*   Keep the feedback supportive and **{length_desc}**."""
+#    else:
+#        # Fallback for unknown content types
+#        prompt += f"\nGenerate general educational content about '{specific_topic}' using the **{strategy_name_cap}** approach, tailored for the student's context (Grade {grade}, Mastery {mastery_desc}, Difficulty {difficulty_desc}, Length {length_desc}). {scaffolding_desc}"
+#
+#    prompt += "\n\nGenerate the content now:"
+#    return prompt
 def generate_prompt_template(
     content_type: str,
-    strategy: TeachingStrategies,
+    strategy: 'TeachingStrategies',
     topic_full_name: str,
-    effective_difficulty: float, # Calculated difficulty (0-1)
-    mastery: float, # Current mastery (0-1)
+    effective_difficulty: float,
+    mastery: float,
     grade: int,
     learning_style_prefs: Dict[str, float],
-    request_details: ContentRequest,
-    difficulty_choice: DifficultyLevel,
-    scaffolding_choice: ScaffoldingLevel,
-    feedback_choice: FeedbackType,
-    length_choice: ContentLength
+    request_details: 'ContentRequest',
+    difficulty_choice: 'DifficultyLevel',
+    scaffolding_choice: 'ScaffoldingLevel',
+    feedback_choice: 'FeedbackType',
+    length_choice: 'ContentLength'
 ) -> str:
-    """Generates a detailed prompt for the LLM based on RL actions and student state."""
+    """
+    Generates a detailed prompt for the LLM designed to elicit a structured
+    JSON output suitable for an ITS frontend.
+    """
 
-    # Deconstruct topic name
-    parts = topic_full_name.split('-', 2) # Split max 2 times
+    # --- Prepare context variables ---
+    parts = topic_full_name.split('-', 2)
     subject = parts[0] if len(parts) > 0 else "General"
     subsubject_or_topic = parts[1] if len(parts) > 1 else topic_full_name
     specific_topic = parts[2] if len(parts) > 2 else subsubject_or_topic
-    specific_topic = specific_topic.replace('-', ' ') # Make more readable
+    specific_topic = specific_topic.replace('-', ' ').title() # Title case for display
 
-    # Get dominant learning style
     primary_style = "balanced"
     if learning_style_prefs:
-         primary_style_name = max(learning_style_prefs.items(), key=lambda item: item[1])[0]
-         # Map name back to enum if needed, or just use capitalized name
-         primary_style = primary_style_name.capitalize()
+        # Ensure keys are lowercase for consistent matching if needed, though max works fine
+        primary_style_name = max(learning_style_prefs.items(), key=lambda item: item[1])[0]
+        primary_style = primary_style_name.capitalize()
 
-
-    # Descriptions based on state/action
     mastery_desc = "new to this topic or struggling" if mastery < 0.3 else "developing understanding" if mastery < 0.7 else "quite familiar"
-    difficulty_desc = difficulty_choice.name.lower() # Use RL choice name
+    difficulty_desc = difficulty_choice.name.lower()
     scaffolding_desc = {
-        ScaffoldingLevel.NONE: "Provide standard content.",
-        ScaffoldingLevel.HINTS: "Include hints where appropriate (e.g., in quizzes).",
-        ScaffoldingLevel.GUIDANCE: "Provide step-by-step guidance or worked examples prominently."
+        ScaffoldingLevel.NONE: "Provide standard content without extra hints or detailed steps unless part of the core explanation.",
+        ScaffoldingLevel.HINTS: "Include subtle hints or guiding questions where appropriate (e.g., within practice questions or explanations).",
+        ScaffoldingLevel.GUIDANCE: "Provide explicit step-by-step guidance, worked examples, or detailed breakdowns prominently."
     }[scaffolding_choice]
-    length_desc = length_choice.name.lower() # concise, standard, detailed
-    strategy_name_cap = strategy.name.capitalize()
+    length_desc = length_choice.name.lower()
+    # Replace underscores in strategy names for better readability if needed
+    strategy_name_cap = strategy.name.replace('_', ' ').capitalize()
+    content_type_cap = content_type.capitalize()
 
-    # --- Base Prompt ---
-    prompt = f"""Act as an expert {grade}th grade NCERT curriculum tutor generating educational content.
+    # Safely get feedback choice name, default if somehow invalid
+    feedback_choice_name = getattr(feedback_choice, 'name', 'UNKNOWN').upper()
 
-**Student Context:**
-*   Grade: {grade}
-*   Topic: {specific_topic} (Subject: {subject})
-*   Mastery Level: {mastery_desc} (Score: {mastery:.2f})
-*   Primary Learning Style: {primary_style}
-*   Requested Content Type: {content_type.capitalize()}
+    # --- Determine Content-Type Specific Instructions ---
+    content_specific_instructions = ""
 
-**Instructional Plan (from AI Tutor):**
-*   Teaching Strategy: Use a **{strategy_name_cap}** approach.
-*   Target Difficulty: Aim for a **{difficulty_desc}** level relative to the student's mastery (Effective Difficulty Score: {effective_difficulty:.2f}).
-*   Pacing/Length: Keep the content **{length_desc}**.
-*   Scaffolding: {scaffolding_desc}
+    # Local helper to avoid repetition in feedback instruction generation
+    def get_feedback_instruction(fb_choice_name: str) -> str:
+        examples = {
+            "CORRECTIVE": "Correct Answer: [Answer]",
+            "HINT": "Correct Answer: [Answer]\\nHint: [Hint text]",
+            "ELABORATED": "Correct Answer: [Answer]\\nExplanation: [Explanation text]",
+            "SOCRATIC": "Correct Answer: [Answer]\\nGuiding Question: [Socratic question text]"
+        }
+        return examples.get(fb_choice_name, "Correct Answer: [Answer]") # Default to corrective
 
-**Task:**
-Generate the requested "{content_type.capitalize()}" content for "{specific_topic}".
-Ensure it's engaging, accurate, suitable for the student's grade and mastery, formatted clearly using Markdown, and adheres to the Instructional Plan above.
+    if content_type == "lesson":
+        feedback_detail_instruction = get_feedback_instruction(feedback_choice_name)
+        content_specific_instructions = f"""
+**If `contentType` is "lesson":**
+*   Use these `sectionType` values in order: `lesson_introduction`, `lesson_core_concept`, `lesson_example`, `lesson_check_in`, `lesson_summary`.
+*   `lesson_introduction`: State topic & 1-2 learning objectives ({length_desc}) in `contentMarkdown`. Set `title` to "Introduction".
+*   `lesson_core_concept`: Explain key ideas using {strategy_name_cap} approach in `contentMarkdown`. Apply {scaffolding_choice.name} scaffolding. Adapt for {primary_style} learners. Keep content {length_desc}. Set `title` to "Core Concepts".
+*   `lesson_example`: Provide 1-2 clear, {difficulty_desc} examples or illustrations in `contentMarkdown`. Apply {scaffolding_desc}. Set `title` to "Examples".
+*   `lesson_check_in`: This section object MUST include fields: `questionText` (String) containing **ONLY** the question text itself and `answerDetail` (String) containing **ONLY** the answer and/or explanation, formatted like "{feedback_detail_instruction}". `contentMarkdown` can add context. Set `title` to "Check Your Understanding".
+*   `lesson_summary`: Briefly recap main points ({length_desc}) in `contentMarkdown`. Set `title` to "Summary"."""
+
+    elif content_type == "quiz" or content_type == "assessment":
+        # Assume ContentLength Enum has values like CONCISE=0, STANDARD=1, DETAILED=2
+        num_questions = 3 if length_choice == ContentLength.CONCISE else 5 if length_choice == ContentLength.STANDARD else 7
+        feedback_detail_instruction = get_feedback_instruction(feedback_choice_name)
+        scaffold_instr = f"Apply {scaffolding_choice.name} hints within `questionText` if specified." if scaffolding_choice == ScaffoldingLevel.HINTS else ""
+
+        content_specific_instructions = f"""
+**If `contentType` is "quiz" or "assessment":**
+*   Generate exactly {num_questions} section objects.
+*   Each section MUST have `sectionType`: `quiz_question`.
+*   Each section object MUST include these fields:
+    *   `questionNumber`: (Integer) e.g., 1, 2, ...
+    *   `questionText`: (String) The text of the question. Include MC options like (A)... (B)... within this string if applicable.
+    *   `answerDetail`: (String) The answer details formatted EXACTLY like this example for the {feedback_choice_name} style: "{feedback_detail_instruction}"
+*   Target question difficulty should be {difficulty_desc}.
+*   {scaffold_instr}
+*   The `contentMarkdown` field can be empty or duplicate `questionText`. The `title` field should be "Question {{questionNumber}}".
 """
 
-    # --- Content Type Specific Instructions ---
-    # Incorporate strategy, scaffolding, length, feedback type where relevant
-    if content_type == "lesson":
-        prompt += f"""
-**Lesson Requirements:**
-1.  **Introduction:** Briefly state topic & learning objectives ({length_desc}).
-2.  **Core Content:** Explain key concepts using the **{strategy_name_cap}** approach. {scaffolding_desc} Adapt for {primary_style} learning. Use {grade}th grade examples. Adhere to **{length_desc}** pacing.
-3.  **Check-in:** Include 1-2 simple questions or a reflection prompt.
-4.  **Summary:** Briefly recap main points ({length_desc})."""
-    elif content_type == "quiz" or content_type == "assessment":
-        num_questions = 3 if length_choice == ContentLength.CONCISE else 5 if length_choice == ContentLength.STANDARD else 7
-        feedback_instr = { # Instructions based on feedback type choice
-            FeedbackType.CORRECTIVE: "Provide only the correct answer.",
-            FeedbackType.HINT: "Provide the correct answer and a brief hint towards the solution.",
-            FeedbackType.ELABORATED: "Provide the correct answer and a clear, concise explanation.",
-            FeedbackType.SOCRATIC: "Provide the correct answer, and ask a short Socratic question to prompt deeper thinking about why it's correct."
-        }[feedback_choice]
-        scaffold_instr = "Include optional hints for challenging questions." if scaffolding_choice == ScaffoldingLevel.HINTS else ""
-
-        prompt += f"""
-**Quiz/Assessment Requirements:**
-*   Generate {num_questions} questions for "{specific_topic}".
-*   Target difficulty should be **{difficulty_desc}** relative to the student's mastery ({mastery_desc}).
-*   Include a mix of question types (e.g., Multiple Choice, Short Answer).
-*   {scaffold_instr}
-*   For each question, provide the answer details following this feedback style: **{feedback_instr}**
-
-**Format:**
-**1. [Question Text]**
-   (A) [Option A] ... (if applicable)
-   **Answer Details:** [Based on feedback style: Answer, optional Hint/Explanation/Socratic Question]
----
-(Repeat for other questions)"""
     elif content_type == "flashcard":
         num_flashcards = 3 if length_choice == ContentLength.CONCISE else 5
-        prompt += f"""
-**Flashcard Requirements:**
-*   Generate {num_flashcards} flashcards for key concepts/terms in "{specific_topic}" suitable for {mastery_desc}.
-*   Front should be a question or term, Back should be a concise answer/definition. Keep it **{length_desc}**.
+        content_specific_instructions = f"""
+**If `contentType` is "flashcard":**
+*   Generate exactly {num_flashcards} pairs of section objects (total {num_flashcards*2} sections).
+*   For each flashcard (N = 1 to {num_flashcards}):
+    *   Create one section object with `sectionType`: `flashcard_front`, `title`: "Flashcard {{N}} - Front". `contentMarkdown` contains the term or question ({length_desc}).
+    *   Create one section object with `sectionType`: `flashcard_back`, `title`: "Flashcard {{N}} - Back". `contentMarkdown` contains the concise answer/definition ({length_desc}).
+*   Ensure content is suitable for {mastery_desc} mastery level."""
 
-**Format:**
-**Flashcard 1:**
-**Front:** [Term or Question]
-**Back:** [Concise Answer/Definition]
----
-(Repeat {num_flashcards} times)"""
     elif content_type == "cheatsheet":
-        prompt += f"""
-**Cheatsheet Requirements:**
-*   Create a concise summary sheet ({length_desc}) for "{specific_topic}".
-*   Include key definitions, formulas, steps, or important facts.
-*   Use headings, bullet points, and bold text for easy scanning. Focus on quick reference suitable for {mastery_desc}."""
+        content_specific_instructions = f"""
+**If `contentType` is "cheatsheet":**
+*   Use `sectionType` values like `cheatsheet_introduction`, `cheatsheet_key_definitions`, `cheatsheet_formulas`, `cheatsheet_key_steps`, etc., as appropriate for the topic "{specific_topic}". Choose relevant types.
+*   Provide a relevant `title` for each section (e.g., "Key Definitions", "Important Formulas").
+*   Use `contentMarkdown` for bullet points, bold text, etc., focusing on quick reference ({length_desc}). You can use Markdown subheadings (`### Subheading`) within `contentMarkdown` for further structure."""
+
     elif content_type == "explanation":
-        prompt += f"""
-**Explanation Requirements:**
-*   Provide a clear explanation of "{request_details.subtopic or specific_topic}".
-*   Use the **{strategy_name_cap}** approach. {scaffolding_desc}
-*   Target difficulty: **{difficulty_desc}**. Keep it **{length_desc}**.
-*   Address potential confusion points based on the student context ({mastery_desc})."""
+        explanation_target = (request_details.subtopic or specific_topic).replace('-', ' ').title()
+
+        content_specific_instructions = f"""
+**If `contentType` is "explanation":**
+*   Use these `sectionType` values in order: `explanation_main`, `explanation_key_points`, `explanation_example` (only include example section if relevant and helpful).
+*   Set the main `topic` field in the root JSON object to "{explanation_target}".
+*   `explanation_main`: Provide the core explanation of "{explanation_target}" in `contentMarkdown`. Use {strategy_name_cap} approach. Target {difficulty_desc} difficulty. Keep it {length_desc}. Apply {scaffolding_choice.name} scaffolding ({scaffolding_desc}). Address potential confusion points based on {mastery_desc} mastery. Set `title` to "Explanation".
+*   `explanation_key_points`: Summarize 2-3 crucial takeaways in bullet points within `contentMarkdown`. Set `title` to "Key Points".
+*   `explanation_example`: If included, provide one clear, illustrative example in `contentMarkdown`. Set `title` to "Example"."""
+
     elif content_type == "feedback":
-         feedback_instr = {
-            FeedbackType.CORRECTIVE: "Confirm if the input is correct or incorrect. If incorrect, state the correct answer briefly.",
-            FeedbackType.HINT: "Acknowledge the input. If incorrect, provide a hint towards the correct solution/concept.",
-            FeedbackType.ELABORATED: "Acknowledge the input. Explain why it's correct or incorrect, referencing the key concepts of '{specific_topic}'.",
-            FeedbackType.SOCRATIC: "Acknowledge the input. Ask a guiding question related to '{specific_topic}' to help the student reflect on their answer (correct or incorrect)."
-        }[feedback_choice]
-         prompt += f"""
-**Feedback Requirements:**
-*   Student Context: Grade {grade}, Topic '{specific_topic}', Mastery {mastery_desc}.
-*   Student Input Provided: `{request_details.user_input or "[No input provided]"}`
-*   Task: Provide constructive feedback on the student's input using this style: **{feedback_instr}**
-*   Keep the feedback supportive and **{length_desc}**."""
-    else:
-        # Fallback for unknown content types
-        prompt += f"\nGenerate general educational content about '{specific_topic}' using the **{strategy_name_cap}** approach, tailored for the student's context (Grade {grade}, Mastery {mastery_desc}, Difficulty {difficulty_desc}, Length {length_desc}). {scaffolding_desc}"
+        user_input_context = request_details.user_input or "[No input provided, assume general feedback request]"
+        # Basic sanitization (escape backticks and potentially other Markdown characters)
+        user_input_context = user_input_context.replace('`', '\\`').replace('{', '\\{').replace('}', '\\}')
 
-    prompt += "\n\nGenerate the content now:"
+        feedback_style_instruction = {
+            "CORRECTIVE": "Confirm if the input is correct or incorrect. If incorrect, state the correct answer briefly.",
+            "HINT": "Acknowledge the input. If incorrect, provide a hint towards the correct solution/concept without giving the full answer.",
+            "ELABORATED": "Acknowledge the input. Explain clearly why it's correct or incorrect, referencing the key concepts of '{specific_topic}'.", # specific_topic will be replaced later
+            "SOCRATIC": "Acknowledge the input. Ask a short, specific guiding question related to '{specific_topic}' to help the student reflect on their answer (correct or incorrect) and discover the reasoning themselves."
+        }.get(feedback_choice_name, "Provide general constructive feedback.")
+        # Substitute the topic name into the instruction if needed
+        feedback_style_instruction = feedback_style_instruction.format(specific_topic=specific_topic)
+
+        content_specific_instructions = f"""
+**If `contentType` is "feedback":**
+*   Use a single section object with `sectionType`: `feedback_content`.
+*   Set the `title` to "Feedback".
+*   The `contentMarkdown` MUST contain the feedback text itself.
+*   Base the feedback on the following student input: `{user_input_context}`
+*   The feedback MUST follow the {feedback_choice_name} style: "{feedback_style_instruction}"
+*   Keep the feedback supportive, encouraging, and {length_desc}."""
+
+    else: # Fallback for unknown types
+         content_specific_instructions = f"""
+**If `contentType` is "{content_type}" (General):**
+*   Use a single section object with `sectionType`: `general_content`.
+*   Set the `title` to "{content_type_cap}: {specific_topic}".
+*   Generate relevant educational content about "{specific_topic}" in `contentMarkdown`.
+*   Follow the overall Instructional Plan (Strategy: {strategy_name_cap}, Difficulty: {difficulty_desc}, Length: {length_desc}, Scaffolding: {scaffolding_choice.name}).
+*   Use Markdown subheadings (`### Subheading`) within `contentMarkdown` for structure if helpful."""
+
+    # --- Construct the Final Prompt ---
+    prompt = f"""You are an expert {grade}th grade NCERT curriculum tutor. Generate educational content that is STRICTLY focused on the topic without any extraneous material.
+
+**OUTPUT REQUIREMENT: Return ONLY a valid JSON object - no introductions, explanations, or additional text.**
+
+**JSON STRUCTURE:**
+{{
+  "contentType": "{content_type}",
+  "topic": "{specific_topic}",
+  "subject": "{subject}",
+  "instructionalPlan": {{
+    "teachingStrategy": "{strategy_name_cap}",
+    "targetDifficulty": "{difficulty_desc}",
+    "effectiveDifficultyScore": {effective_difficulty:.2f},
+    "contentLength": "{length_desc}",
+    "scaffoldingLevel": "{scaffolding_choice.name}",
+    "feedbackStyle": "{feedback_choice_name}"
+  }},
+  "sections": [
+    {{
+      "sectionType": "example_section_type",
+      "title": "Example Section Title",
+      "contentMarkdown": "Example content in markdown format"
+      // Additional fields as needed per content type
+    }}
+  ]
+}}
+
+**IMPORTANT RULES:**
+1. Your entire response must be ONLY the JSON object - nothing else
+2. Do NOT include phrases like "as a tutor", "future work", "note to teacher", etc.
+3. Focus EXCLUSIVELY on {specific_topic} - avoid unrelated topics
+4. Do NOT include introductory or concluding meta-commentary
+5. Start your response with {{ and end with }}
+6. All content must be appropriate for grade {grade}
+
+**STUDENT CONTEXT:**
+- Grade: {grade}
+- Topic: {specific_topic} (Subject: {subject})
+- Mastery Level: {mastery_desc} ({mastery:.2f}/1.0)
+- Learning Style: {primary_style}
+- Content Requested: {content_type_cap}
+
+**INSTRUCTIONAL PLAN:**
+- Teaching Strategy: {strategy_name_cap}
+- Difficulty Level: {difficulty_desc} (Score: {effective_difficulty:.2f})
+- Content Length: {length_desc}
+- Scaffolding Level: {scaffolding_choice.name} ({scaffolding_desc})
+- Feedback Style: {feedback_choice_name}
+
+**SPECIFIC CONTENT REQUIREMENTS:**
+{content_specific_instructions}
+
+Remember: Generate ONLY the JSON object with educational content strictly related to {specific_topic}. No additional text.
+"""
+
     return prompt
-
 
 async def stream_llm_response(prompt: str, model_id: str, config: Optional[GenerationConfig]):
     """Streams the response from the Ollama LLM."""
