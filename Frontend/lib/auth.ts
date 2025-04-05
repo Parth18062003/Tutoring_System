@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { PrismaClient } from "@prisma/client";
-import { admin, openAPI } from "better-auth/plugins";
+import { admin, captcha, openAPI } from "better-auth/plugins";
 import { sendResetPasswordEmail } from "@/components/email/reset-password-link";
 import { resend } from "./resend";
 import { sendVerifyEmail } from "@/components/email/verify-email-token";
@@ -16,7 +16,7 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  trustedOrigins: ['http://localhost:3000', 'http://192.168.29.159:3000'],
+  trustedOrigins: ["http://localhost:3000", "http://192.168.29.159:3000"],
   user: {
     changeEmail: {
       enabled: true,
@@ -67,6 +67,10 @@ export const auth = betterAuth({
   plugins: [
     openAPI(),
     admin(),
+    captcha({
+      provider: "cloudflare-turnstile",
+      secretKey: process.env.TURNSTILE_SECRET_KEY!,
+    }),
     twoFactor({
       skipVerificationOnEnable: true,
       otpOptions: {

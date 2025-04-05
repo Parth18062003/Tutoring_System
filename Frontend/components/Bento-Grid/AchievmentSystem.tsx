@@ -8,7 +8,7 @@ const AchievmentSystem = () => {
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.6, delay: 0.8 }}
-    className="relative col-span-1 md:col-span-2 overflow-hidden rounded-3xl bg-gradient-to-br from-[#DFE2FE]/10 to-[#7874F2]/20 border border-white/10 p-6 group"
+    className="relative col-span-1 md:col-span-2 overflow-hidden rounded-3xl bg-gradient-to-br from-[#DFE2FE]/10 to-[#7874F2]/20 dark:from-[#2C2A8D]/90 dark:to-[#2F4782]/90 border border-white/10 p-6 group"
   >
     <div className="space-y-2">
       <div className="inline-flex items-center rounded-full bg-[#7874F2]/20 px-2.5 py-0.5 text-xs font-medium text-[#B1CBFA]">

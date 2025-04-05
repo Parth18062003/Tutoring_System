@@ -107,8 +107,12 @@
 /* Handle */
 ::-webkit-scrollbar-thumb {
   background: var(--primary);
+  border-radius: 3px;
 }
 
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
 
 @theme inline {
   --color-background: var(--background);

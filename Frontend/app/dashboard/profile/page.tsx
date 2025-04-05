@@ -35,7 +35,7 @@ export default async function ProfilePage() {
 
         <div className="md:col-span-8 mx-auto">
           <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-y-5 mb-14 md:mb-0">
               <TabsTrigger value="personal">Personal</TabsTrigger>
               <TabsTrigger value="account">Account</TabsTrigger>
               <TabsTrigger value="appearance">Appearance</TabsTrigger>

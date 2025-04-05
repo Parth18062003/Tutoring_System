@@ -15,7 +15,7 @@ const passwordRoutes = [
   "/authentication/forgot-password",
 ];
 const adminRoutes = ["/admin"];
-const publicRoutes = ["/"];
+const publicRoutes = ["/", "/learn"];
 
 export default async function middleware(request: NextRequest) {
   const pathName = request.nextUrl.pathname;
@@ -45,7 +45,7 @@ export default async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
     if (isAuthRoute || isPasswordRoute) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/dashboard/profile", request.url));
     }
   }
 

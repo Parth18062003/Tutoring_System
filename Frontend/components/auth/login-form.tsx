@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import SubmitButton from "../ui/submit-button";
+import { Turnstile } from '@marsidev/react-turnstile'
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
@@ -36,8 +37,9 @@ export function LoginForm({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | undefined>();
   const router = useRouter();
-
+  const sitekey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY as string;
   // Initialize form with validation schema
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -47,6 +49,7 @@ export function LoginForm({
     },
   });
 
+  console.log("Turnstile token:", turnstileToken);
   const onSubmit = async (values: LoginFormValues) => {
     setIsSubmitting(true);
     setError(null);
@@ -56,6 +59,11 @@ export function LoginForm({
         {
           email: values.email,
           password: values.password,
+          fetchOptions: {
+            headers: {
+              "x-captcha-response": turnstileToken || "",
+            }, 
+          },
         },
         {
           onRequest: () => {
@@ -266,6 +274,7 @@ export function LoginForm({
                     </Button>
                   </motion.div>
 
+
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -308,6 +317,7 @@ export function LoginForm({
                 </motion.div>
               </form>
             </Form>
+            <Turnstile siteKey={sitekey}  onSuccess={setTurnstileToken} />
           </div>
           <div className="relative hidden bg-muted md:block">
             <DotLottieReact

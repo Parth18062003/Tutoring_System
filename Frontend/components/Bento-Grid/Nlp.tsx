@@ -27,7 +27,7 @@ const Nlp = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-[#7874F2]/20 to-[#DFE2FE]/5 border border-white/10 p-6 group"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-[#7874F2]/20 to-[#DFE2FE]/5 dark:from-[#2C2A8D]/90 dark:to-[#2F4782]/90 border border-white/10 p-6 group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       

@@ -119,18 +119,19 @@ const LearningPaths = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="relative col-span-1 md:col-span-2 row-span-2 group overflow-hidden rounded-3xl bg-gradient-to-br from-[#DFE2FE]/10 to-[#7874F2]/30 border border-white/10 p-6 md:p-8"
+      className="relative col-span-1 md:col-span-2 row-span-2 group overflow-hidden rounded-3xl bg-gradient-to-br from-[#DFE2FE]/10 to-[#7874F2]/30 dark:from-[#2C2A8D]/90 dark:to-[#2F4782]/90
+ border border-white/10 p-6 md:p-8"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       
     >
       <div className="flex flex-col h-full justify-between">
         <div className="space-y-2">
-          <div className="inline-flex items-center rounded-full bg-[#7874F2]/20 px-2.5 py-0.5 text-xs font-medium text-[#B1CBFA]">
+          <div className="inline-flex items-center rounded-full bg-[#7874F2]/20 dark:bg-[#7874F2]/90 px-2.5 py-0.5 text-xs font-medium text-[#B1CBFA] dark:text-[#B1CBFA]">
             <Sparkles className="w-3.5 h-3.5 mr-1" />
             AI-Driven Learning
           </div>
-          <h3 className="text-xl md:text-2xl font-bold text-white">
+          <h3 className="text-xl md:text-2xl font-bold text-white dark:text-zinc-50">
             Personalized Learning Paths
           </h3>
           <p className="text-sm md:text-base text-slate-300">

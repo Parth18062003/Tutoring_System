@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import SubmitButton from "../ui/submit-button";
+import { Turnstile } from '@marsidev/react-turnstile'
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
@@ -35,6 +36,8 @@ export function SignUpForm({
 }: React.ComponentProps<"div">) {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | undefined>();  
+  const sitekey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY as string;
   const router = useRouter();
 
   // Initialize form with validation schema
@@ -58,7 +61,12 @@ export function SignUpForm({
         {
           email: values.email,
           password: values.password,
-          name: name,
+          name : name,
+          fetchOptions: {
+            headers: {
+              "x-captcha-response": turnstileToken || "",
+            }, 
+          },
         },
         {
           onRequest: () => {
@@ -312,6 +320,7 @@ export function SignUpForm({
                   </div>
                 </form>
               </Form>
+              <Turnstile siteKey={sitekey}  onSuccess={setTurnstileToken} />
             </div>
             <div className="relative hidden bg-muted md:block">
               <DotLottieReact

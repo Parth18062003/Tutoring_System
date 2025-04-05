@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+/* import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
@@ -77,4 +77,34 @@ The overall difficulty should be ${difficulty}.`;
 function getAgeFromClass(classNum: string): string {
   const classNumber = parseInt(classNum);
   return `${classNumber + 5}-${classNumber + 6}`;
-}
+} */
+  import { generateQuiz } from "@/lib/quiz";
+import { NextRequest, NextResponse } from "next/server";
+  
+  export async function POST(request: NextRequest) {
+    try {
+      const { topic, difficulty, questionCount, questionTypes } = await request.json();
+  
+      if (!topic || !difficulty) {
+        return NextResponse.json(
+          { error: "Topic and difficulty are required" },
+          { status: 400 }
+        );
+      }
+  
+      const quizData = await generateQuiz(
+        topic,
+        difficulty,
+        questionCount || 5,
+        questionTypes || ['multiple-choice', 'true-false', 'short-answer']
+      );
+  
+      return NextResponse.json({ quiz: quizData });
+    } catch (error) {
+      console.error("Error in quiz generation API:", error);
+      return NextResponse.json(
+        { error: "Failed to generate quiz" },
+        { status: 500 }
+      );
+    }
+  }

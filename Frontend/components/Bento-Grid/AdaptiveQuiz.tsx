@@ -8,7 +8,7 @@ const AdaptiveQuiz = () => {
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.6, delay: 0.5 }}
-    className="relative overflow-hidden rounded-3xl bg-black/20 border border-white/10 p-6 group"
+    className="relative overflow-hidden rounded-3xl bg-black/20 dark:bg-black/90 border border-white/10 p-6 group"
     
   >
     <div className="space-y-2">

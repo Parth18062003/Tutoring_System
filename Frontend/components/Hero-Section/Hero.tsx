@@ -156,7 +156,7 @@ const Hero = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="mb-8"
           >
-            <h2 className="text-xl md:text-2xl font-medium text-slate-700">
+            <h2 className="text-xl md:text-2xl font-medium text-zinc-700 dark:text-zinc-300">
               Adaptive Intelligent Tutoring System that <TypingEffect />
             </h2>
           </motion.div>
@@ -166,7 +166,7 @@ const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="text-slate-600 mb-10 max-w-2xl"
+            className="text-zinc-600 dark:text-zinc-300 mb-10 max-w-2xl"
           >
             Our AI-powered tutoring platform creates personalized learning experiences
             that adapt in real-time to your unique cognitive patterns, knowledge gaps,
@@ -183,7 +183,7 @@ const Hero = () => {
             <button className="px-8 py-3 rounded-lg bg-[#7091e6] text-white font-medium hover:bg-[#5a7dd9] transition-colors shadow-lg shadow-[#7091e6]/20">
               Start Learning
             </button>
-            <button className="px-8 py-3 rounded-lg border border-[#7091e6]/30 text-slate-700 font-medium hover:bg-[#7091e6]/10 transition-colors">
+            <button className="px-8 py-3 rounded-lg border border-[#7091e6]/30 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-[#7091e6]/10 transition-colors">
               View Demo
             </button>
           </motion.div>
@@ -212,7 +212,7 @@ const Hero = () => {
                   {stat.icon}
                 </div>
                 <p className="text-2xl font-bold text-[#7091e6]">{stat.value}</p>
-                <p className="text-sm text-slate-600">{stat.label}</p>
+                <p className="text-sm text-zinc-600">{stat.label}</p>
               </motion.div>
             ))}
           </motion.div>

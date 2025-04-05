@@ -22,7 +22,7 @@ const TrustedBy = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-[#DFE2FE]/10 dark:from-zinc-950/90 to-[#DFE2FE]/20 dark:to-[#DFE2FE]/5"></div>
 
       {/* Animated accent elements */}
-      <div className="absolute -left-20 top-1/4 w-40 h-40 rounded-full bg-[#8E98F5]/10 blur-xl animate-pulse-slow"></div>
+      <div className="absolute -left-20 top-1/4 w-40 h-40 rounded-full bg-[#8E98F5]/10 dark:bg-[#8E98F5]/20 blur-xl animate-pulse-slow"></div>
       <div className="absolute -right-20 bottom-1/4 w-40 h-40 rounded-full bg-[#7091E6]/10 blur-xl animate-pulse-slow" 
            style={{ animationDelay: "1.5s" }}></div>
 
@@ -45,7 +45,7 @@ const TrustedBy = () => {
                 data-aos="fade-up"
                 data-aos-delay={index * 100}
               >
-                <div className="relative p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-[#B1CBFA]/20 transition-all duration-300 hover:border-[#8E98F5]/50 hover:shadow-lg hover:shadow-[#7091E6]/5">
+                <div className="relative p-4 bg-white/5 dark:bg-zinc-800/90 backdrop-blur-sm rounded-xl border border-[#B1CBFA]/20 transition-all duration-300 hover:border-[#8E98F5]/50 hover:shadow-lg hover:shadow-[#7091E6]/5">
                   <div className="absolute inset-0 bg-gradient-to-br from-[#DFE2FE]/10 to-[#7091E6]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
 
                   <Image
