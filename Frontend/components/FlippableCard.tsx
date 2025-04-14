@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react'; // Add useEffect
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { cn } from '@/lib/utils';

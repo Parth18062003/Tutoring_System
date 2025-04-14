@@ -4,15 +4,14 @@ import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  BrainCircuit,
   Facebook,
   Twitter,
   Instagram,
   ArrowUpRight,
-  Mail,
-  MapPin,
-  Phone,
+
 } from "lucide-react";
+import Image from "next/image";
+import logo from "@/public/brainwave.png";
 
 export default function Footer() {
   return (
@@ -29,9 +28,15 @@ export default function Footer() {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="col-span-2 lg:col-span-2"
             >
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-[#7091e6] to-[#3D52A0] flex items-center justify-center">
-                  <BrainCircuit className="h-6 w-6 text-white" />
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                  <Image
+                    src={logo}
+                    alt="Logo"
+                    width={40}
+                    height={40}
+                    className="w-8 h-8"
+                  />
                 </div>
                 <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-t from-[#3D52A0] dark:from-[#b3cdff] to-[#7091E6]">
                   Brain Wave

@@ -34,22 +34,19 @@ export function SectionRenderer({
   const sectionRef = useRef<HTMLDivElement>(null);
   const [showAnswer, setShowAnswer] = useState(false);
 
-  // Set up intersection observer for visibility tracking
   useEffect(() => {
     if (!sectionRef.current || !onVisibilityChange) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Consider it "read" if more than 70% visible
         if (entry.intersectionRatio > 0.7) {
           onVisibilityChange(true);
-          // Once marked as visible, we can disconnect this observer
           observer.disconnect();
         }
       },
       {
         threshold: 0.7,
-        rootMargin: "0px 0px -100px 0px", // Consider visible even if bottom is not visible
+        rootMargin: "0px 0px -100px 0px", 
       }
     );
 
@@ -60,7 +57,6 @@ export function SectionRenderer({
     };
   }, [onVisibilityChange]);
 
-  // Get appropriate icon for section type
   const getSectionIcon = () => {
     const iconClassName = "h-5 w-5";
 
@@ -80,7 +76,6 @@ export function SectionRenderer({
     }
   };
 
-  // Handle section types with specific rendering
   const renderSectionContent = () => {
     if (!section) return null;
 
@@ -98,7 +93,6 @@ export function SectionRenderer({
     }
   };
 
-  // Regular markdown content rendering
   const renderMarkdownContent = () => {
     return (
       <div className="prose prose-slate max-w-none">
@@ -204,7 +198,6 @@ export function SectionRenderer({
     );
   };
 
-  // Special rendering for example sections
   const renderExampleSection = () => {
     return (
       <div className="space-y-4">
@@ -215,7 +208,6 @@ export function SectionRenderer({
     );
   };
 
-  // Special rendering for summary sections
   const renderSummarySection = () => {
     return (
       <div className="space-y-4">
@@ -226,16 +218,12 @@ export function SectionRenderer({
     );
   };
 
-  // Special rendering for check-in/assessment sections
-// Special rendering for check-in/assessment sections
 const renderCheckInSection = () => {
-    // Check if this is a structured question or a markdown-based question
     const isStructuredQuestion = section.questionText || section.answerDetail;
     const hasCheckUnderstanding = section.contentMarkdown?.includes("Check Your Understanding") || 
                                  section.contentMarkdown?.includes("## Check") ||
                                  section.title?.includes("Check");
     
-    // Helper function to clean answer text (not a hook, just a regular function)
     const cleanText = (text: string) => {
       return text
         .replace(/Answer Detail:\s*Correct/gi, '')
@@ -243,17 +231,14 @@ const renderCheckInSection = () => {
         .trim();
     };
     
-    // For markdown-based questions (not using the structured fields)
     if (!isStructuredQuestion && hasCheckUnderstanding) {
-      // Extract questions and answers from markdown content
       const content = section.contentMarkdown || "";
       const questions = content.split(/Question:|Reflection Prompt:/)
-        .filter((part, index) => index > 0) // Skip the intro part
+        .filter((part, index) => index > 0) 
         .map(part => part.trim());
       
       return (
         <div className="space-y-6">
-          {/* Render introduction part if any */}
           {content.split(/Question:|Reflection Prompt:/)[0].trim() && (
             <div className="mb-4 prose prose-slate max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
@@ -262,16 +247,13 @@ const renderCheckInSection = () => {
             </div>
           )}
           
-          {/* Render each question and answer pair */}
           {questions.map((question, index) => {
-            // Get better question/answer splitting
             const hasAnswer = question.includes("Answer:") || question.includes("Suggested response:");
             
             let questionText = question;
             let answerText = null;
             
             if (hasAnswer) {
-              // Find the index of the first occurrence of either "Answer:" or "Suggested response:"
               const answerKeywords = ["Answer:", "Suggested response:"];
               let firstIndex = question.length;
               let foundKeyword = "";
@@ -287,7 +269,6 @@ const renderCheckInSection = () => {
               questionText = question.substring(0, firstIndex).trim();
               answerText = question.substring(firstIndex + foundKeyword.length).trim();
               
-              // Clean the answer text
               answerText = cleanText(answerText);
             }
             
@@ -310,7 +291,6 @@ const renderCheckInSection = () => {
                   </CardContent>
                 </Card>
                 
-                {/* Answer card if there is an answer */}
                 {answerText && (
                   <div className={cn(isPrintMode ? "block" : showAnswer ? "block" : "hidden")}>
                     <Card className="border-l-4 border-green-500">
@@ -331,7 +311,6 @@ const renderCheckInSection = () => {
                   </div>
                 )}
                 
-                {/* Show Answer button if there's an answer and we're not in print mode */}
                 {!isPrintMode && answerText && !showAnswer && (
                   <Button variant="outline" onClick={() => setShowAnswer(true)} className="mt-2">
                     Show Answer
@@ -344,13 +323,10 @@ const renderCheckInSection = () => {
       );
     }
     
-    // Clean structured question content
     const cleanedAnswerDetail = section.answerDetail ? cleanText(section.answerDetail) : "";
     
-    // Use the existing structured question handling with cleaned text
     return (
       <div className="space-y-4">
-        {/* If there's contentMarkdown before the question, render it */}
         {section.contentMarkdown &&
           section.contentMarkdown.trim() !== section.questionText && (
             <div className="mb-4">

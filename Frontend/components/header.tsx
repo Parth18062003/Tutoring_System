@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BrainCircuit } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import logo from "@/public/brainwave.png";
 
 const navLinks = [
   { href: "#features", label: "Features" },
@@ -52,7 +53,14 @@ export function Header() {
                 whileHover={{ rotate: [0, 10, -10, 0] }}
                 transition={{ duration: 0.4 }}
               >
-                <BrainCircuit className="h-6 w-6 text-[#7091e6]" />
+                <Image
+                  src={logo}
+                  priority
+                  alt="Brain Wave Logo"
+                  width={45}
+                  height={45}
+                  className="rounded-full mr-2"
+                />
               </motion.div>
               <span className="hidden md:block text-3xl font-bold bg-gradient-to-t from-[#3D52A0] to-[#7091E6] text-transparent bg-clip-text">
                 Brain Wave

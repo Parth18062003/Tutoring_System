@@ -6,3 +6,4 @@ const AdaptiveLearningPage = () => {
 };
 
 export default AdaptiveLearningPage;
+

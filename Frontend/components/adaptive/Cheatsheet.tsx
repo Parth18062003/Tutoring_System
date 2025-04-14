@@ -25,7 +25,7 @@ import {
   Menu, ChevronDown, ArrowDownToLine, Eye, ChevronUp, ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 // Helper to get appropriate icon for section type
 const getSectionIcon = (sectionType: string) => {

@@ -136,7 +136,7 @@ export default function LessonPage() {
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
   const { currentInteractionId, currentSubject, currentTopic, setInteraction } =
     useLearningSessionStore();
-
+  
   // Calculate reading time based on content length
   useEffect(() => {
     if (lessonContent?.sections) {
@@ -157,91 +157,78 @@ export default function LessonPage() {
     }
   }, [lessonContent]);
 
-  useEffect(() => {
-    if (currentSubject && !hasInitiallyLoaded) {
-      loadLesson(currentSubject, null);
-      // Set start time when lesson loads
-      setStartTime(Date.now());
-      // Set flag to prevent multiple loads
-      setHasInitiallyLoaded(true);
-    } else if (!currentSubject) {
-      setError("No subject selected to load lesson.");
-      setIsLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasInitiallyLoaded])
-  // Load a lesson
   const loadLesson = useCallback(
-    async (subject: string, topic?: string | null) => {
-      setIsLoading(true);
+    async (subject: string, topic?: string | null) => { // topic is already optional here
+      // ... (setIsLoading, setError, setCompletedSections) ...
+
+      // --- FIX: Provide default null for topic if undefined ---
+      // Clear interaction immediately before new fetch starts
+      // Use '?? null' to default undefined to null
+      setInteraction(null, subject, topic ?? null);
+      // --- END FIX ---
+
+      setIsLoading(true); // Set loading true *before* fetch
       setError(null);
-      setCompletedSections(new Set());
+      setLessonContent(null); // Clear previous content
 
-      // Submit feedback for previous interaction if exists
-      if (currentInteractionId) {
-        try {
-          await submitInteractionFeedback({
-            interaction_id: currentInteractionId,
-            completion_percentage: 100,
-          });
-        } catch (feedbackError: any) {
-          console.warn(
-            "Failed to submit feedback for previous interaction:",
-            feedbackError
-          );
-          toast.error("Could not submit previous feedback", {
-            description: feedbackError.message,
-          });
-        }
-      }
-
-      // Fetch new lesson content
       try {
+        console.log(`Fetching content for Subject: ${subject}, Topic: ${topic || 'Default'}`);
+        // Pass topic (which might be null or string) to fetchAdaptiveContent
         const { metadata, content } = await fetchAdaptiveContent({
           content_type: "lesson",
           subject: subject,
-          topic: topic,
+          topic: topic, // fetchAdaptiveContent likely handles null correctly
         });
 
         if (!content || content.contentType !== "lesson") {
-          throw new Error(
-            "Received invalid content type or empty content from API."
-          );
+          throw new Error("Received invalid content type or empty content from API.");
         }
 
+        console.log("Lesson content received and parsed.");
         setLessonContent(content);
-        setActiveSection(0); // Reset to first section
+        setActiveSection(0);
+        // Update store with NEW interaction details AFTER successful fetch
+        // Use ?? null again for safety, though metadata.topic should ideally be string | null
         setInteraction(
           metadata.interactionId,
           metadata.subject,
-          metadata.topic
+          metadata.topic ?? null
         );
+        setStartTime(Date.now()); // Set start time now
+
       } catch (err: any) {
         console.error("Failed to load lesson:", err);
-        setError(
-          err.message ||
-            "An unexpected error occurred while loading the lesson."
-        );
+        setError(err.message || "An unexpected error occurred.");
         setLessonContent(null);
+        // Clear interaction if fetch failed using the initially intended subject/topic
+        setInteraction(null, subject, topic ?? null); // Use default null here too
         toast.error("Failed to load lesson", { description: err.message });
       } finally {
         setIsLoading(false);
       }
     },
-    [setInteraction]
-  );
+    [setInteraction] // Keep dependencies
+  )
 
-  // Initial load
+  // Initial load useEffect - USING hasInitiallyLoaded pattern
   useEffect(() => {
-    if (currentSubject) {
-      loadLesson(currentSubject, null);
-    } else {
+    // Guard condition: Only run if subject exists AND initial load hasn't occurred
+    if (currentSubject && !hasInitiallyLoaded) {
+      console.log("LessonPage useEffect: Triggering initial load for subject:", currentSubject);
+      loadLesson(currentSubject, currentTopic); // Call the memoized load function
+      setHasInitiallyLoaded(true); // Set flag *after* initiating the load
+    } else if (!currentSubject && !isLoading) {
+      // Handle case where subject is missing and we're not already loading
       setError("No subject selected to load lesson.");
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Dependencies for this effect:
+    // - currentSubject, currentTopic: Trigger reload if these change BEFORE initial load
+    // - hasInitiallyLoaded: Prevent re-running after initial load
+    // - loadLesson: Include the function itself as a dependency
+  }, [currentSubject, currentTopic, hasInitiallyLoaded, loadLesson]);
 
+  // --- END OF CHANGES ---
   // Mark section as completed
   const markSectionCompleted = useCallback((sectionIndex: number) => {
     setCompletedSections((prev) => {
@@ -520,7 +507,6 @@ export default function LessonPage() {
       </div>
     );
 
-    // View mode toggle
     const viewModeToggle = (
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-2">
@@ -552,13 +538,10 @@ export default function LessonPage() {
 
     return (
       <div ref={contentRef} className="lesson-content-area print:p-0">
-        {/* Progress and view mode controls */}
         {progressBar}
         {viewModeToggle}
 
-        {/* Main content layout */}
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Table of Contents Sidebar */}
           {showToc && (
             <Card className="md:w-64 shrink-0 print:hidden">
               <CardHeader className="p-3 pb-1">
@@ -588,8 +571,6 @@ export default function LessonPage() {
                             <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
                           )}
                         </button>
-
-                        {/* Sub-items from markdown headings for this section */}
                         {tableOfContents
                           .filter(
                             (item) =>
@@ -600,8 +581,6 @@ export default function LessonPage() {
                               key={item.id}
                               onClick={() => {
                                 navigateToSection(item.sectionIndex);
-
-                                // Additionally, scroll to this specific heading if possible
                                 if (viewMode === "continuous") {
                                   setTimeout(() => {
                                     document
@@ -632,7 +611,6 @@ export default function LessonPage() {
           {/* Main content area */}
           <div className="flex-1 min-w-0">
             {viewMode === "sections" ? (
-              // Section view - show one section at a time with navigation
               <div>
                 {lessonContent.sections.map((section, index) => (
                   <div
@@ -679,7 +657,6 @@ export default function LessonPage() {
                       </CardFooter>
                     </Card>
 
-                    {/* If it's the last section, show a completion message */}
                     {index === lessonContent.sections.length - 1 &&
                       activeSection === index && (
                         <motion.div
@@ -701,7 +678,6 @@ export default function LessonPage() {
                 ))}
               </div>
             ) : (
-              // Continuous view - show all sections at once for scrolling
               <Card>
                 <CardContent className="p-6">
                   {lessonContent.sections.map((section, index) => (
@@ -744,7 +720,6 @@ export default function LessonPage() {
           </div>
         </div>
 
-        {/* Print-specific version */}
         <div className="hidden print:block space-y-6">
           <p className="text-sm text-muted-foreground mb-2">
             User: Parth18062003 | Date: 2025-03-31 16:01:15
@@ -777,11 +752,10 @@ export default function LessonPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="container mx-auto px-4 py-8">
       {renderHeader()}
       {renderContent()}
 
-      {/* Action Controls */}
       {!isLoading && !error && lessonContent && viewMode === "sections" && (
         <div className="mt-8 print:hidden">
           <Separator className="mb-6" />
@@ -803,7 +777,6 @@ export default function LessonPage() {
         </div>
       )}
 
-      {/* Print styles */}
       <style jsx global>{`
         @media print {
           body {
