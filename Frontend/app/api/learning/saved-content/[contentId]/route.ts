@@ -4,10 +4,8 @@ import { headers } from 'next/headers';
 
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:8000";
 
-export async function GET(
-  request: NextRequest, 
-  { params }: { params: { contentId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ contentId: string }> }) {
+  const params = await props.params;
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     
@@ -19,7 +17,7 @@ export async function GET(
     }
     
     // Correctly access contentId from the params object passed to the handler function
-    const contentId = params.contentId;
+    const contentId = await params.contentId;
     
     const response = await fetch(`${API_BASE_URL}/content/saved/${contentId}`, {
       headers: {
@@ -46,10 +44,8 @@ export async function GET(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { contentId: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ contentId: string }> }) {
+  const params = await props.params;
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     
