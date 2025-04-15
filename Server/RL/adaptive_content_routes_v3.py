@@ -31,7 +31,7 @@ import io
 from prompt_manager import PromptManager
 from response_validator import ResponseValidator
 from asyncio import Lock
-from functools import lru_cache
+import random
 
 try:
     from ncert_tutor import (
@@ -271,6 +271,21 @@ class SessionFeedback(BaseModel):
     feedback_text: Optional[str] = None
 
 
+class AssessmentGenerateRequest(BaseModel):
+    topic: str
+    subject: str
+    question_count: int = Field(default=5, ge=1, le=20)
+    difficulty: Optional[float] = Field(None, ge=0.0, le=1.0)
+    question_types: List[str] = Field(
+        default=["multiple_choice", "short_answer", "true_false"])
+    misconceptions: Optional[List[str]] = None
+
+
+class AssessmentEvaluateRequest(BaseModel):
+    assessment_id: str
+    responses: List[Dict[str, Any]]
+
+
 class ExerciseGenerator:
     """Dynamically generates exercises at appropriate difficulty levels"""
 
@@ -279,34 +294,222 @@ class ExerciseGenerator:
         self.kg = kg_client
         self.cache = {}
 
-    async def generate_exercise(self, topic: str, difficulty: float,
-                                misconceptions: List[str] = None) -> Dict:
-        """Generate an exercise targeting specific difficulty and misconceptions"""
-        cache_key = f"{topic}_{difficulty}_{','.join(misconceptions or [])}"
+    async def generate_multiple_exercises(self, topic: str, difficulty: float,
+                                          misconceptions: List[str] = None,
+                                          question_count: int = 5,
+                                          question_types: List[str] = None,
+                                          provided_kg_context: str = "") -> List[Dict]:
+        """Generate multiple exercises in a single API call"""
+        # Create a cache key for the batch
+        cache_key = f"{topic}_{difficulty}_{','.join(misconceptions or [])}_{question_count}"
         if cache_key in self.cache:
             return self.cache[cache_key]
 
-        kg_context = ""
-        if self.kg:
-            kg_context = await self.kg.get_topic_context(topic)
+        kg_context = provided_kg_context
+        if not kg_context and self.kg:
+            kg_context = await self.get_topic_context(topic)
 
-        prompt = self._create_exercise_prompt(
-            topic, difficulty, misconceptions, kg_context)
+        # Create a prompt requesting multiple questions
+        prompt = self._create_batch_exercise_prompt(
+            topic, difficulty, misconceptions, kg_context, question_count, question_types)
 
-        response = await self.llm.complete(prompt)
-        exercise = self._parse_exercise_response(response)
+        # Configure system prompt
+        system_prompt = (
+            "You are an expert educational content creator specializing in creating structured JSON responses. "
+            "Your output must be valid JSON only. Format your entire response as a single JSON object with no "
+            "additional text. Ensure proper escaping of quotes and special characters in JSON strings."
+        )
 
-        self.cache[cache_key] = exercise
-        return exercise
+        # Initialize response text
+        full_response = ""
 
-    def _create_exercise_prompt(self, topic: str, difficulty: float, misconceptions: List[str] = None, kg_context: str = ""):
-        """Create specialized prompt for exercise generation."""
+        try:
+            # Stream chat completion in a non-streaming way for TogetherAI
+            async for chunk in self.llm.stream_chat(
+                prompt=prompt,
+                model=os.environ.get(
+                    "TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
+                temperature=0.7,
+                max_tokens=4000,  # Increased token limit for multiple questions
+                system_prompt=system_prompt
+            ):
+                # Process chunks
+                if isinstance(chunk, dict):
+                    if "output" in chunk and isinstance(chunk["output"], dict) and "content" in chunk["output"]:
+                        full_response += chunk["output"]["content"]
+                    elif "content" in chunk:
+                        full_response += chunk["content"]
+                    elif "text" in chunk:
+                        full_response += chunk["text"]
+                elif isinstance(chunk, str):
+                    full_response += chunk
+        except Exception as e:
+            logger.error(
+                f"Error generating exercise batch: {e}", exc_info=True)
+            full_response = "{\"questions\": []}"
 
+        # Parse the accumulated response
+        exercises = self._parse_batch_exercises_response(
+            full_response, question_count)
+
+        self.cache[cache_key] = exercises
+        return exercises
+
+    async def get_topic_context(self, topic: str) -> str:
+        """Retrieve topic context from Neo4j knowledge graph"""
+        if not self.kg:
+            return ""
+
+        try:
+            # Clean up topic name for query
+            topic_clean = topic.replace("-", "_").replace(" ", "_").lower()
+            context = []
+
+            # First, try a simple query to get the concept
+            basic_query = """
+            MATCH (c:Concept {name: $topic})
+            RETURN c.name as name, c.description as description
+            """
+
+            def run_basic_query():
+                with self.kg.session(database=NEO4J_DATABASE) as session:
+                    result = session.run(basic_query, topic=topic_clean)
+                    return [record.data() for record in result]
+
+            basic_records = await asyncio.to_thread(run_basic_query)
+
+            if basic_records and basic_records[0]:
+                data = basic_records[0]
+                if data.get("description"):
+                    context.append(f"Description: {data['description']}")
+
+            # Check if the relationship types exist before running the full query
+            schema_check_query = """
+            CALL db.schema.visualization()
+            YIELD nodes, relationships
+            RETURN 
+                [rel IN relationships | type(rel)] as rel_types,
+                [node IN nodes | labels(node)[0]] as node_labels
+            """
+
+            def run_schema_check():
+                with self.kg.session(database=NEO4J_DATABASE) as session:
+                    result = session.run(schema_check_query)
+                    return result.single()
+
+            schema_data = await asyncio.to_thread(run_schema_check)
+
+            if schema_data:
+                rel_types = schema_data.get("rel_types", [])
+                node_labels = schema_data.get("node_labels", [])
+
+                # Build dynamic query based on available schema
+                dynamic_query_parts = [
+                    "MATCH (c:Concept {name: $topic})"
+                ]
+
+                return_parts = [
+                    "c.name as name",
+                    "c.description as description"
+                ]
+
+                collect_parts = []
+
+                if "HAS_DEFINITION" in rel_types and "Definition" in node_labels:
+                    dynamic_query_parts.append(
+                        "OPTIONAL MATCH (c)-[:HAS_DEFINITION]->(def:Definition)")
+                    collect_parts.append(
+                        "collect(distinct def.text) as definitions")
+
+                if "HAS_EXAMPLE" in rel_types and "Example" in node_labels:
+                    dynamic_query_parts.append(
+                        "OPTIONAL MATCH (c)-[:HAS_EXAMPLE]->(ex:Example)")
+                    collect_parts.append(
+                        "collect(distinct ex.text) as examples")
+
+                if "RELATES_TO" in rel_types:
+                    dynamic_query_parts.append(
+                        "OPTIONAL MATCH (c)-[:RELATES_TO]->(rel:Concept)")
+                    collect_parts.append(
+                        "collect(distinct rel.name) as related")
+
+                return_parts.extend(collect_parts)
+
+                dynamic_query = "\n".join(
+                    dynamic_query_parts) + "\nRETURN " + ",\n".join(return_parts)
+
+                def run_dynamic_query():
+                    with self.kg.session(database=NEO4J_DATABASE) as session:
+                        result = session.run(dynamic_query, topic=topic_clean)
+                        return [record.data() for record in result]
+
+                dynamic_records = await asyncio.to_thread(run_dynamic_query)
+
+                if dynamic_records and dynamic_records[0]:
+                    data = dynamic_records[0]
+
+                    if data.get("definitions") and any(data["definitions"]):
+                        context.append("Definitions:")
+                        for d in [d for d in data["definitions"] if d]:
+                            context.append(f"- {d}")
+
+                    if data.get("examples") and any(data["examples"]):
+                        context.append("Examples:")
+                        for e in [e for e in data["examples"] if e]:
+                            context.append(f"- {e}")
+
+                    if data.get("related") and any(data["related"]):
+                        context.append("Related concepts: " +
+                                       ", ".join([r for r in data["related"] if r]))
+
+            # If still no good data, try fallback with broader text search
+            if not context:
+                fallback_query = """
+                MATCH (c:Concept) 
+                WHERE c.name CONTAINS $term OR c.description CONTAINS $term
+                RETURN c.name as name, c.description as description
+                LIMIT 3
+                """
+
+                def run_fallback():
+                    with self.kg.session(database=NEO4J_DATABASE) as session:
+                        result = session.run(
+                            fallback_query, term=topic.lower())
+                        return [record.data() for record in result]
+
+                fallback_records = await asyncio.to_thread(run_fallback)
+
+                if fallback_records:
+                    context.append("Related knowledge graph information:")
+                    for record in fallback_records:
+                        if record.get("name") and record.get("description"):
+                            context.append(
+                                f"{record['name']}: {record['description']}")
+
+            return "\n".join(context) if context else ""
+
+        except Exception as e:
+            logger.error(
+                f"Error retrieving topic context from KG: {e}", exc_info=True)
+            return ""
+
+    def _create_batch_exercise_prompt(self, topic: str, difficulty: float,
+                                      misconceptions: List[str] = None,
+                                      kg_context: str = "",
+                                      question_count: int = 5,
+                                      question_types: List[str] = None):
+        """Create specialized prompt for batch exercise generation."""
         difficulty_desc = "basic"
         if difficulty > 0.75:
             difficulty_desc = "challenging"
         elif difficulty > 0.4:
             difficulty_desc = "intermediate"
+
+        # Default question types if not specified
+        if not question_types:
+            question_types = ["multiple_choice", "short_answer", "true_false"]
+
+        question_types_str = ", ".join(question_types)
 
         misconception_guidance = ""
         if misconceptions and len(misconceptions) > 0:
@@ -315,7 +518,7 @@ class ExerciseGenerator:
     The student has shown the following misconceptions that should be addressed:
     {misconception_list}
 
-    Design your exercise to specifically target and correct these misconceptions.
+    Design your exercises to specifically target and correct these misconceptions.
     """
 
         kg_section = ""
@@ -325,103 +528,136 @@ class ExerciseGenerator:
     {kg_context}
     --- END CONTEXT FROM KNOWLEDGE GRAPH ---
 
-    Base your exercise on the factual information provided above to ensure NCERT curriculum alignment.
+    Base your exercises on the factual information provided above to ensure NCERT curriculum alignment.
     """
 
         # Create the prompt
-        prompt = f"""Create a {difficulty_desc} level educational exercise about "{topic}" for a middle school student.
+        prompt = f"""Create {question_count} unique {difficulty_desc} level educational exercises about "{topic}" for a middle school student.
     {kg_section}
     {misconception_guidance}
 
+    Generate a mix of question types including: {question_types_str}. Make sure the questions are diverse and cover different aspects of the topic.
+    
     Generate your response as a valid JSON object with the following structure:
 
     ```json
     {{
-      "exercise_type": "multiple_choice|short_answer|fill_in_blank|true_false",
-      "question": "The full question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],  // Include for multiple_choice only
-      "correct_answer": "The correct answer or option letter for multiple choice",
-      "explanation": "Detailed explanation of why this is correct",
-      "hint": "A hint to help if the student is stuck",
-      "misconception_addressed": "Specific misconception this exercise addresses",
-      "difficulty_level": "{difficulty_desc}",
-      "topic": "{topic}"
+      "questions": [
+        {{
+          "exercise_type": "multiple_choice|short_answer|fill_in_blank|true_false",
+          "question": "The full question text here",
+          "options": ["Option A", "Option B", "Option C", "Option D"],  // Include for multiple_choice only
+          "correct_answer": "The correct answer or option letter for multiple choice",
+          "explanation": "Detailed explanation of why this is correct",
+          "hint": "A hint to help if the student is stuck",
+          "misconception_addressed": "Specific misconception this exercise addresses",
+          "difficulty_level": "{difficulty_desc}",
+          "topic": "{topic}"
+        }},
+        // {question_count-1} more questions with the same structure...
+      ]
     }}
+    ```
 
+    Ensure your exercises:
 
-    Ensure your exercise:
-
-    - Is appropriate for the {difficulty_desc} difficulty level  
-    - Is factually correct and aligned with NCERT curriculum standards  
-    - Has clear, unambiguous wording  
-    - For multiple choice, includes plausible distractors that target common misconceptions  
-    - Provides a helpful explanation that clarifies concepts
+    - Are appropriate for the {difficulty_desc} difficulty level  
+    - Are factually correct and aligned with NCERT curriculum standards  
+    - Have clear, unambiguous wording  
+    - For multiple choice, include plausible distractors that target common misconceptions  
+    - Provide helpful explanations that clarify concepts
+    - EACH QUESTION MUST BE UNIQUE - do not repeat similar questions
 
     Respond ONLY with the JSON object. No additional text.
     """
 
         return prompt
 
-    def _parse_exercise_response(self, response: str) -> Dict:
-        """Parse LLM response into structured exercise."""
+    def _parse_batch_exercises_response(self, response: str, expected_count: int) -> List[Dict]:
+        """Parse LLM response into a list of structured exercises."""
+        exercises = []
+
         try:
             json_content = response
 
+            # Extract JSON content if wrapped
             if "```json" in response:
                 parts = response.split("```json")
                 if len(parts) > 1:
                     json_content = parts[1].split("```")[0].strip()
-
             elif "```" in response:
                 parts = response.split("```")
                 if len(parts) > 1:
                     json_content = parts[1].strip()
 
-            exercise_data = json.loads(json_content)
+            # Parse the batch response
+            data = json.loads(json_content)
 
-            required_fields = ["question", "correct_answer", "explanation"]
-            for field in required_fields:
-                if field not in exercise_data:
-                    exercise_data[field] = f"Missing {field}"
+            # Check if we have a questions array
+            if "questions" in data and isinstance(data["questions"], list):
+                questions_batch = data["questions"]
 
-            if "hint" not in exercise_data:
-                exercise_data["hint"] = "Think about the key concepts we've covered."
+                for q in questions_batch:
+                    # Process each question in the batch
+                    exercise = self._process_single_exercise(q)
+                    exercises.append(exercise)
 
-            if "exercise_type" not in exercise_data:
-                # Try to detect the type
-                if "options" in exercise_data and isinstance(exercise_data["options"], list):
-                    exercise_data["exercise_type"] = "multiple_choice"
-                else:
-                    exercise_data["exercise_type"] = "short_answer"
-
-            if "options" not in exercise_data and exercise_data["exercise_type"] == "multiple_choice":
-                exercise_data["options"] = ["Option A",
-                                            "Option B", "Option C", "Option D"]
-
-            exercise_data["timestamp"] = datetime.now(timezone.utc).isoformat()
-            exercise_data["source"] = "ai_generated"
-
-            return exercise_data
+            # If parsing failed or returned empty list, create fallback exercises
+            if not exercises:
+                exercises = self._create_fallback_exercises(expected_count)
 
         except json.JSONDecodeError as e:
-            return {
+            logger.error(f"JSON decode error in batch exercises: {e}")
+            exercises = self._create_fallback_exercises(expected_count)
+        except Exception as e:
+            logger.error(f"Error parsing batch exercises: {e}")
+            exercises = self._create_fallback_exercises(expected_count)
+
+        return exercises
+
+    def _process_single_exercise(self, exercise_data: Dict) -> Dict:
+        """Process a single exercise object from the batch."""
+        # Add required fields if missing
+        required_fields = ["question", "correct_answer", "explanation"]
+        for field in required_fields:
+            if field not in exercise_data:
+                exercise_data[field] = f"Missing {field}"
+
+        if "hint" not in exercise_data:
+            exercise_data["hint"] = "Think about the key concepts we've covered."
+
+        if "exercise_type" not in exercise_data:
+            # Try to detect the type
+            if "options" in exercise_data and isinstance(exercise_data["options"], list):
+                exercise_data["exercise_type"] = "multiple_choice"
+            else:
+                exercise_data["exercise_type"] = "short_answer"
+
+        if "options" not in exercise_data and exercise_data["exercise_type"] == "multiple_choice":
+            exercise_data["options"] = ["Option A",
+                                        "Option B", "Option C", "Option D"]
+
+        exercise_data["timestamp"] = datetime.now(timezone.utc).isoformat()
+        exercise_data["source"] = "ai_generated"
+        exercise_data["id"] = str(uuid4())  # Add unique ID
+
+        return exercise_data
+
+    def _create_fallback_exercises(self, count: int) -> List[Dict]:
+        """Create fallback exercises if generation fails."""
+        fallbacks = []
+        for i in range(count):
+            fallbacks.append({
                 "exercise_type": "short_answer",
-                "question": "Exercise generation failed. Please try again.",
-                "correct_answer": "N/A",
-                "explanation": "There was an error processing the exercise.",
-                "error": str(e),
-                "raw_response": response[:200] + ("..." if len(response) > 200 else ""),
+                "question": f"Question {i+1}: Please describe what you understand about this topic.",
+                "correct_answer": "The answer will vary but should demonstrate understanding of the key concepts.",
+                "explanation": "There was an error generating this question.",
+                "hint": "Focus on the main concepts covered in your learning materials.",
+                "id": str(uuid4()),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "source": "fallback"
-            }
-        except Exception as e:
-            return {
-                "exercise_type": "error",
-                "question": "An unexpected error occurred.",
-                "error": str(e),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "source": "error"
-            }
+            })
+        return fallbacks
 
 
 class MetacognitiveSupport:
@@ -835,45 +1071,81 @@ class AssessmentEngine:
         """Evaluate a short answer response using an LLM"""
         prompt = f"""As an educational assessment expert, evaluate this student's answer:
 
-Question: {question}
-Grade Level: {grade} 
-Subject: {subject}
-Topic: {topic}
-Correct Answer: {correct_answer}
-Student Response: {student_response}
+        Question: {question}
+        Grade Level: {grade} 
+        Subject: {subject}
+        Topic: {topic}
+        Correct Answer: {correct_answer}
+        Student Response: {student_response}
 
-Evaluate the answer for:
-1. Correctness (score 0-100)
-2. Specific misconceptions revealed
-3. Knowledge gaps identified
-4. Reasoning patterns demonstrated
-5. Key concepts understood vs. missed
+        Evaluate the answer for:
+        1. Correctness (score 0-100)
+        2. Specific misconceptions revealed
+        3. Knowledge gaps identified
+        4. Reasoning patterns demonstrated
+        5. Key concepts understood vs. missed
 
-Return ONLY a valid JSON object matching this schema:
-{{
-  "score": <0-100>,
-  "correct": <boolean>,
-  "partial_credit": <float or null>,
-  "misconceptions": ["specific misconception 1", "specific misconception 2"],
-  "knowledge_gaps": ["specific gap 1", "specific gap 2"],
-  "reasoning_patterns": ["pattern description"],
-  "feedback": "detailed feedback for student",
-  "improvement_suggestions": ["suggestion 1", "suggestion 2"],
-  "key_concepts_understood": ["concept 1", "concept 2"],
-  "key_concepts_missed": ["concept 3", "concept 4"]
-}}
+        Return ONLY a valid JSON object matching this schema:
+        {{
+          "score": <0-100>,
+          "correct": <boolean>,
+          "partial_credit": <float or null>,
+          "misconceptions": ["specific misconception 1", "specific misconception 2"],
+          "knowledge_gaps": ["specific gap 1", "specific gap 2"],
+          "reasoning_patterns": ["pattern description"],
+          "feedback": "detailed feedback for student",
+          "improvement_suggestions": ["suggestion 1", "suggestion 2"],
+          "key_concepts_understood": ["concept 1", "concept 2"],
+          "key_concepts_missed": ["concept 3", "concept 4"]
+        }}
 
-Your assessment must be fair, objective, and grade-appropriate. The "feedback" should be encouraging while identifying specific areas for improvement.
-"""
+        Your assessment must be fair, objective, and grade-appropriate. The "feedback" should be encouraging while identifying specific areas for improvement.
+        """
 
         try:
-            response_text = await self.llm.complete(prompt)
+            # Configure system prompt
+            system_prompt = (
+                "You are an expert educational assessment evaluator. "
+                "Respond with valid JSON only."
+            )
 
-            json_match = re.search(r'({.*})', response_text, re.DOTALL)
+            # Initialize full response
+            full_response = ""
+
+            # Stream chat completion to accumulate the full response
+            async for chunk in self.llm.stream_chat(
+                prompt=prompt,
+                model=os.environ.get(
+                    "TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
+                temperature=0.2,  # Lower temperature for more consistent evaluation
+                max_tokens=1000,
+                system_prompt=system_prompt
+            ):
+                # Process chunks based on their structure
+                try:
+                    if isinstance(chunk, dict):
+                        # Try various path structures in the chunk
+                        if "output" in chunk and isinstance(chunk["output"], dict) and "content" in chunk["output"]:
+                            full_response += chunk["output"]["content"]
+                        elif "content" in chunk:
+                            full_response += chunk["content"]
+                        elif "text" in chunk:
+                            full_response += chunk["text"]
+                    elif isinstance(chunk, str):
+                        # If chunk is a string, just add it
+                        full_response += chunk
+                except Exception as e:
+                    logger.error(f"Error processing chunk: {e}")
+                    # If there's an error, try to use the chunk as is
+                    if isinstance(chunk, str):
+                        full_response += chunk
+
+            # Extract JSON from response
+            json_match = re.search(r'({.*})', full_response, re.DOTALL)
             if json_match:
-                response_text = json_match.group(1)
+                full_response = json_match.group(1)
 
-            evaluation = json.loads(response_text)
+            evaluation = json.loads(full_response)
 
             result = AssessmentResult(
                 score=evaluation.get("score", 0),
@@ -888,7 +1160,7 @@ Your assessment must be fair, objective, and grade-appropriate. The "feedback" s
                 key_concepts_understood=evaluation.get(
                     "key_concepts_understood", []),
                 key_concepts_missed=evaluation.get("key_concepts_missed", []),
-                response_analysis={"raw_llm_response": response_text[:500]}
+                response_analysis={"raw_llm_response": full_response[:500]}
             )
 
             return result
@@ -2763,6 +3035,720 @@ async def submit_feedback(
         logger.error(f"Feedback error user {user_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=500, detail="Feedback processing failed.")
+
+
+@app.post("/content/save")
+async def save_content(
+    content_data: Dict[str, Any],
+    user_id: str = Depends(get_user_id_from_proxy)
+):
+    """Save content for later viewing."""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    # Generate a unique ID for the saved content
+    content_id = content_data.get("interaction_id") or str(uuid4())
+
+    # Prepare document for insertion
+    save_doc = {
+        "content_id": content_id,
+        "user_id": user_id,
+        "content_type": content_data.get("contentType"),
+        "subject": content_data.get("subject"),
+        "topic": content_data.get("topic"),
+        "title": content_data.get("title", content_data.get("topic")),
+        "sections": content_data.get("sections", []),
+        "metadata": {
+            "strategy": content_data.get("instructionalPlan", {}).get("teachingStrategy"),
+            "difficulty": content_data.get("instructionalPlan", {}).get("targetDifficulty"),
+            "scaffolding": content_data.get("instructionalPlan", {}).get("scaffoldingLevel"),
+            "feedback_style": content_data.get("instructionalPlan", {}).get("feedbackStyle"),
+            "mastery_at_save": content_data.get("metadata", {}).get("mastery_at_request", 0.0)
+        },
+        "created_at": datetime.now(timezone.utc),
+        "last_viewed_at": datetime.now(timezone.utc),
+        "favorite": False,
+        "notes": ""
+    }
+
+    try:
+        result = await learning_db["saved_content"].update_one(
+            {"content_id": content_id, "user_id": user_id},
+            {"$set": save_doc},
+            upsert=True
+        )
+
+        return {
+            "status": "success",
+            "message": "Content saved successfully",
+            "content_id": content_id
+        }
+    except Exception as e:
+        logger.error(
+            f"Error saving content for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save content")
+
+
+@app.get("/content/saved")
+async def get_saved_content_list(
+    user_id: str = Depends(get_user_id_from_proxy),
+    content_type: Optional[str] = None,
+    subject: Optional[str] = None
+):
+    """Get list of saved content for a user with optional filtering."""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    # Build query with filters
+    query = {"user_id": user_id}
+    if content_type:
+        query["content_type"] = content_type
+    if subject:
+        query["subject"] = subject
+
+    try:
+        # Project only the necessary fields for listing
+        cursor = learning_db["saved_content"].find(
+            query,
+            projection={
+                "content_id": 1,
+                "content_type": 1,
+                "subject": 1,
+                "topic": 1,
+                "title": 1,
+                "created_at": 1,
+                "last_viewed_at": 1,
+                "favorite": 1,
+                "metadata": 1
+            }
+        ).sort("last_viewed_at", -1)
+
+        content_list = await cursor.to_list(length=100)
+        for item in content_list:
+            item["_id"] = str(item["_id"])
+
+        return content_list
+    except Exception as e:
+        logger.error(
+            f"Error retrieving saved content for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve saved content")
+
+
+@app.get("/content/saved/{content_id}")
+async def get_saved_content(
+    content_id: str,
+    user_id: str = Depends(get_user_id_from_proxy)
+):
+    """Get a specific saved content item."""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    try:
+        content = await learning_db["saved_content"].find_one({
+            "content_id": content_id,
+            "user_id": user_id
+        })
+
+        if not content:
+            raise HTTPException(status_code=404, detail="Content not found")
+
+        # Update last viewed time
+        await learning_db["saved_content"].update_one(
+            {"content_id": content_id, "user_id": user_id},
+            {"$set": {"last_viewed_at": datetime.now(timezone.utc)}}
+        )
+
+        content["_id"] = str(content["_id"])
+        return content
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error retrieving content {content_id} for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve content")
+
+
+@app.delete("/content/saved/{content_id}")
+async def delete_saved_content(
+    content_id: str,
+    user_id: str = Depends(get_user_id_from_proxy)
+):
+    """Delete a saved content item."""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    try:
+        result = await learning_db["saved_content"].delete_one({
+            "content_id": content_id,
+            "user_id": user_id
+        })
+
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=404, detail="Content not found or already deleted")
+
+        return {"status": "success", "message": "Content deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error deleting content {content_id} for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete content")
+
+
+@app.post("/assessment/generate")
+async def generate_assessment(
+    request: AssessmentGenerateRequest,
+    user_id: str = Depends(get_user_id_from_proxy)
+):
+    """Generate an assessment with questions targeting specific topic and difficulty."""
+    if together_client is None:
+        raise HTTPException(status_code=503, detail="LLM service unavailable")
+
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    # Get user session
+    session = await get_student_session_mongo(user_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="User session not found.")
+
+    session.last_active = datetime.now(timezone.utc)
+    student_state = session.state
+    student_profile = session.profile
+
+    # Use RL for assessment parameter prediction
+    strategy = TeachingStrategies.ASSESSMENT
+    topic_idx = 0
+    difficulty_choice = DifficultyLevel.NORMAL
+    scaffolding_choice = ScaffoldingLevel.NONE
+    feedback_choice = FeedbackType.CORRECTIVE
+    length_choice = ContentLength.STANDARD
+
+    unwrapped_env = rl_system.unwrapped_env if rl_system else None
+    if rl_system and rl_system.model and unwrapped_env:
+        observation = prepare_observation_from_state(
+            student_state, student_profile, unwrapped_env)
+        if observation is not None:
+            try:
+                action, _ = rl_system.model.predict(
+                    observation, deterministic=True)
+                action = action.astype(int)
+                # We'll override to ASSESSMENT below
+                strategy = TeachingStrategies(action[0])
+                topic_idx = action[1]
+                difficulty_choice = DifficultyLevel(action[2])
+                scaffolding_choice = ScaffoldingLevel(action[3])
+                feedback_choice = FeedbackType(action[4])
+                length_choice = ContentLength(action[5])
+                logger.info(
+                    f"User {user_id}: RL Action Applied for assessment generation.")
+            except Exception as e:
+                logger.error(
+                    f"User {user_id}: RL prediction failed for assessment: {e}", exc_info=True)
+        else:
+            logger.warning(
+                f"User {user_id}: Failed observation prep for assessment. Using defaults.")
+    else:
+        logger.warning(
+            f"User {user_id}: RL system unavailable for assessment. Using defaults.")
+
+    # Always override strategy to ASSESSMENT for this endpoint
+    strategy = TeachingStrategies.ASSESSMENT
+
+    # Map topic if requested, similar to content/next endpoint
+    final_topic_name = request.topic
+    final_topic_idx = -1
+    topic_map = {}
+    all_env_topics = []
+
+    if unwrapped_env and hasattr(unwrapped_env, 'topics') and unwrapped_env.topics:
+        all_env_topics = unwrapped_env.topics
+        topic_map = unwrapped_env.topic_to_idx
+        effective_topic_idx = topic_idx
+
+        if request.topic:
+            matched = find_best_topic_match(request.topic, all_env_topics)
+            if matched is not None:
+                effective_topic_idx = matched
+                logger.info(
+                    f"User {user_id}: Topic override '{request.topic}' -> idx {effective_topic_idx}")
+            else:
+                logger.warning(
+                    f"User {user_id}: Topic override '{request.topic}' not matched in RL model.")
+
+        if 0 <= effective_topic_idx < len(all_env_topics):
+            final_topic_idx = effective_topic_idx
+            final_topic_name = all_env_topics[final_topic_idx]
+        else:
+            logger.warning(
+                f"Topic idx {effective_topic_idx} out of bounds. Using user-provided topic.")
+
+    # Determine difficulty from RL choice or use request value or mastery-based calculation
+    if request.difficulty is None:
+        # Use RL-predicted difficulty, adjusted by mastery
+        mastery = student_state.mastery.get(final_topic_name, 0.3)
+        base_diff = 0.5
+        if unwrapped_env and hasattr(unwrapped_env, 'topic_base_difficulty') and 0 <= final_topic_idx < len(unwrapped_env.topic_base_difficulty):
+            base_diff = unwrapped_env.topic_base_difficulty[final_topic_idx]
+
+        diff_adj = {DifficultyLevel.EASIER: -.2, DifficultyLevel.NORMAL: .0,
+                    DifficultyLevel.HARDER: .2}.get(difficulty_choice, 0.)
+        mastery_factor = 0.15 * mastery
+        difficulty = np.clip(base_diff + diff_adj - mastery_factor, 0.05, 0.95)
+    else:
+        difficulty = request.difficulty
+
+    # Record metrics for this interaction
+    prereq = 1.0
+    if final_topic_idx != -1:
+        prereq = calculate_prerequisite_satisfaction(
+            final_topic_idx, student_state.mastery, unwrapped_env)
+
+    mastery = student_state.mastery.get(final_topic_name, 0.0)
+    diff_desc = f"{difficulty_choice.name.capitalize()} ({difficulty:.2f})"
+
+    subject = final_topic_name.split(
+        '-')[0].replace('_', ' ') if '-' in final_topic_name else request.subject
+
+    use_rag = False
+    if neo4j_driver and mistral_client and NEO4J_DATABASE and isinstance(EMBEDDING_DIMENSION, int):
+        use_rag = True
+    else:
+        logger.warning(
+            "One or more RAG dependencies missing/invalid. RAG disabled for assessment.")
+
+    # Get KG context if RAG is available
+    kg_context = ""
+    kg_used = False
+    query_text = final_topic_name.split('-')[-1].replace('_', ' ')
+
+    if use_rag and final_topic_name != "Default_Topic":
+        chapter_name_sanitized = re.sub(r'\W+', '_', final_topic_name)
+        chapter_name_alternatives = [
+            final_topic_name,
+            chapter_name_sanitized,
+            final_topic_name.replace(' ', '_'),
+            final_topic_name.split('-')[-1].strip()
+        ]
+
+        # Try each alternative chapter name
+        for chapter_try in chapter_name_alternatives:
+            logger.info(
+                f"Trying KG retrieval for assessment with chapter name: '{chapter_try}'")
+
+            retrieved_context = await retrieve_rag_context_vector_search(
+                driver=neo4j_driver,
+                chapter_name_sanitized=chapter_try,
+                query_text=query_text,
+                database_name=NEO4J_DATABASE,
+                vector_index_name="chunkVectorIndex",
+                top_k_vector=3
+            )
+
+            if retrieved_context:
+                kg_context = retrieved_context
+                kg_used = True
+                logger.info(
+                    f"KG context successfully retrieved for assessment on {final_topic_name}")
+                break
+
+    # Create metadata for the learning path
+    metadata = InteractionMetadata(
+        strategy=strategy.name,
+        topic=final_topic_name,
+        difficulty_choice=difficulty_choice.name,
+        scaffolding_choice=scaffolding_choice.name,
+        feedback_choice=feedback_choice.name,
+        length_choice=length_choice.name,
+        subject=subject,
+        content_type="assessment",
+        difficulty_level_desc=diff_desc,
+        mastery_at_request=mastery,
+        # Convert np.float32 to Python float
+        effective_difficulty_value=float(difficulty),
+        prereq_satisfaction=prereq,
+        kg_context_used=kg_used,
+    )
+
+    # Update student state history
+    update_student_state_history(
+        student_state, final_topic_name, strategy.name, topic_map)
+
+    # Add to learning path
+    interaction_log = metadata.model_dump()
+    interaction_log["timestamp_utc"] = session.last_active.isoformat()
+    interaction_log["assessment_id"] = str(uuid4())  # Link to assessment
+    session.learning_path.append(interaction_log)
+
+    # Save session with updated learning path
+    await save_student_session_mongo(session)
+
+    # Initialize exercise generator
+    exercise_generator = ExerciseGenerator(
+        llm_client=together_client,
+        kg_client=neo4j_driver
+    )
+
+    # Get student misconceptions
+    misconceptions = request.misconceptions
+    if not misconceptions and final_topic_name in session.state.misconceptions:
+        misconceptions = [final_topic_name]
+
+    assessment_id = interaction_log["assessment_id"]
+
+    try:
+        # Generate all questions in a single call
+        questions = await exercise_generator.generate_multiple_exercises(
+            topic=final_topic_name,
+            # Convert numpy float to Python float
+            difficulty=float(difficulty),
+            misconceptions=misconceptions,
+            question_count=request.question_count,
+            question_types=request.question_types,
+            provided_kg_context=kg_context
+        )
+
+        # Store assessment in database for later evaluation
+        assessment_doc = {
+            "assessment_id": assessment_id,
+            "user_id": user_id,
+            "topic": request.topic,
+            "subject": request.subject,
+            "questions": questions,
+            # Convert numpy float to Python float
+            "difficulty": float(difficulty),
+            "created_at": datetime.now(timezone.utc),
+            "completed": False,
+            "score": None,
+            "responses": []
+        }
+
+        await learning_db["assessments"].insert_one(assessment_doc)
+
+        # Return assessment
+        return {
+            "assessment_id": assessment_id,
+            "topic": request.topic,
+            "subject": request.subject,
+            "questions": questions,
+            # Convert numpy float to Python float
+            "difficulty": float(difficulty)
+        }
+
+    except Exception as e:
+        logger.error(
+            f"Error generating assessment for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to generate assessment")
+
+
+@app.post("/assessment/evaluate")
+async def evaluate_assessment(
+    request: AssessmentEvaluateRequest,
+    user_id: str = Depends(get_user_id_from_proxy)
+):
+    """Evaluate student responses to an assessment."""
+    if together_client is None:
+        raise HTTPException(status_code=503, detail="LLM service unavailable")
+
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    # Get assessment from database
+    assessment = await learning_db["assessments"].find_one({
+        "assessment_id": request.assessment_id,
+        "user_id": user_id
+    })
+
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+
+    # Initialize assessment engine
+    assessment_engine = AssessmentEngine(
+        llm_client=together_client
+    )
+
+    # Get user session
+    session = await get_student_session_mongo(user_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="User session not found.")
+
+    # Find the learning path entry for this assessment to get mastery_at_request
+    interaction_log = None
+    for i, interaction in enumerate(session.learning_path):
+        if isinstance(interaction, dict) and interaction.get("assessment_id") == request.assessment_id:
+            interaction_log = interaction
+            break
+
+    if not interaction_log:
+        logger.warning(
+            f"Assessment {request.assessment_id} not found in learning path")
+        # Create a default interaction log if not found
+        interaction_log = {"mastery_at_request": 0.0}
+
+    # Evaluate responses
+    evaluation_tasks = []
+    for response_data in request.responses:
+        question_id = response_data.get("question_id")
+        student_response = response_data.get("response")
+
+        # Find the question in the assessment
+        question = next(
+            (q for q in assessment["questions"] if q.get("id") == question_id), None)
+        if not question:
+            continue
+
+        task = assessment_engine.evaluate_response(
+            question=question.get("question", ""),
+            student_response=student_response,
+            correct_answer=question.get("correct_answer", ""),
+            question_type=question.get("exercise_type", "short_answer"),
+            topic=assessment["topic"],
+            subject=assessment["subject"],
+            grade=session.profile.grade
+        )
+        evaluation_tasks.append((question_id, task))
+
+    # Process all evaluations
+    evaluations = {}
+    total_score = 0
+
+    for question_id, task in evaluation_tasks:
+        try:
+            result = await task
+            evaluations[question_id] = result.model_dump()
+            total_score += result.score
+        except Exception as e:
+            logger.error(
+                f"Error evaluating response for question {question_id}: {e}", exc_info=True)
+            evaluations[question_id] = {"error": str(e), "score": 0}
+
+    # Calculate overall score
+    question_count = len(request.responses)
+    average_score = total_score / question_count if question_count > 0 else 0
+
+    # Update student mastery based on assessment results
+    topic = assessment["topic"]
+    student_state = session.state
+
+    # Get the mastery at the time of request from the interaction log
+    mastery_at_request = interaction_log.get("mastery_at_request", 0.0)
+
+    # Current mastery is what's in the state now
+    current_mastery = student_state.mastery.get(topic, mastery_at_request)
+
+    # Calculate mastery impact
+    mastery_impact = 0
+
+    if average_score >= 90:
+        # Outstanding performance – strong evidence of mastery.
+        mastery_impact = 0.20
+    elif average_score >= 80:
+        # Excellent performance – solid grasp of concepts.
+        mastery_impact = 0.15
+    elif average_score >= 70:
+        # Good performance – demonstrates understanding with minor gaps.
+        mastery_impact = 0.10
+    elif average_score >= 60:
+        # Decent performance – some inconsistencies but overall grasp is there.
+        mastery_impact = 0.05
+    elif average_score >= 50:
+        # Emerging understanding – effort visible, needs more consistency.
+        mastery_impact = 0.02
+    elif average_score >= 40:
+        # Foundational knowledge – potential is there, encourage progress.
+        mastery_impact = 0.01
+    elif average_score >= 30:
+        # Struggling – requires additional support and practice.
+        mastery_impact = -0.02
+    elif average_score >= 20:
+        # Significant gaps – learner is disengaged or lacking basics.
+        mastery_impact = -0.05
+    elif average_score >= 10:
+        # Very low performance – minimal understanding, at-risk learner.
+        mastery_impact = -0.08
+    else:
+        # Critical concern – no meaningful engagement or grasp of content.
+        mastery_impact = -0.10
+
+    student_state.previous_mastery[topic] = current_mastery
+
+    # Update mastery, ensuring it stays between 0 and 1
+    new_mastery = min(1.0, max(0.0, current_mastery + mastery_impact))
+    student_state.mastery[topic] = new_mastery
+
+    # Update recent performance in RL state
+    normalized_score = average_score / 100.0
+    student_state.recent_performance = np.clip(
+        0.6 * student_state.recent_performance + 0.4 * normalized_score, 0.0, 1.0
+    )
+
+    # Update motivation based on results
+    mot_chg = 0.0
+    if mastery_impact > 0.01:
+        mot_chg += 0.02
+    if mastery_impact > 0.05:
+        mot_chg += 0.03
+    if average_score < 40:
+        mot_chg -= 0.03
+    student_state.motivation = np.clip(
+        student_state.motivation + mot_chg, 0.1, 0.95)
+
+    # Track misconceptions if score is low
+    if average_score < 50:
+        misconception_strength = (50 - average_score) / 50 * 0.7
+        session.state.misconceptions[topic] = max(
+            session.state.misconceptions.get(topic, 0.0),
+            misconception_strength
+        )
+
+    # Update engagement based on assessment completion
+    student_state.engagement = np.clip(
+        student_state.engagement + (0.03 if average_score > 70 else -0.02),
+        0.1, 0.95
+    )
+
+    # Update cognitive load
+    cognitive_load_change = 0.03 if average_score < 45 else -0.02
+    student_state.cognitive_load = np.clip(
+        student_state.cognitive_load + cognitive_load_change,
+        0.1, 0.95
+    )
+
+    for i, interaction in enumerate(session.learning_path):
+        if isinstance(interaction, dict) and interaction.get("assessment_id") == request.assessment_id:
+            # Update the learning path entry with assessment results
+            session.learning_path[i].update({
+                "completed": True,
+                "score": average_score,
+                "mastery_before_assessment": current_mastery,
+                "mastery_after_assessment": new_mastery,
+                "mastery_gain": new_mastery - current_mastery,
+                "completed_at": datetime.now(timezone.utc).isoformat()
+            })
+            logger.info(
+                f"Updated learning path for assessment {request.assessment_id} with mastery changes")
+            break
+
+    # Save session changes
+    await save_student_session_mongo(session)
+
+    # Update assessment in database
+    await learning_db["assessments"].update_one(
+        {"assessment_id": request.assessment_id},
+        {
+            "$set": {
+                "completed": True,
+                "score": average_score,
+                "responses": request.responses,
+                "evaluations": evaluations,
+                "completed_at": datetime.now(timezone.utc),
+                "mastery_at_request": mastery_at_request,
+                "mastery_before": current_mastery,
+                "mastery_after": new_mastery
+            }
+        }
+    )
+
+    # Aggregate common misconceptions and gaps
+    all_misconceptions = []
+    all_gaps = []
+
+    for eval_data in evaluations.values():
+        if isinstance(eval_data, dict):
+            all_misconceptions.extend(eval_data.get("misconceptions", []))
+            all_gaps.extend(eval_data.get("knowledge_gaps", []))
+
+    from collections import Counter
+    misconception_counts = Counter(all_misconceptions)
+    gap_counts = Counter(all_gaps)
+
+    common_misconceptions = [{"misconception": m, "count": c}
+                             for m, c in misconception_counts.most_common(3)]
+    common_gaps = [{"gap": g, "count": c}
+                   for g, c in gap_counts.most_common(3)]
+
+    # Return evaluation results
+    return {
+        "assessment_id": request.assessment_id,
+        "topic": assessment["topic"],
+        "subject": assessment["subject"],
+        "overall_score": average_score,
+        "mastery_at_request": mastery_at_request,
+        "mastery_before": current_mastery,
+        "mastery_after": new_mastery,
+        "mastery_change": new_mastery - current_mastery,
+        "evaluations": evaluations,
+        "common_misconceptions": common_misconceptions,
+        "common_gaps": common_gaps,
+        "recommendations": [
+            f"Focus on these areas: {', '.join([g['gap'] for g in common_gaps[:2]])}" if common_gaps else
+            "Continue practicing to reinforce your knowledge."
+        ]
+    }
+
+
+@app.get("/assessment/history")
+async def get_assessment_history(
+    user_id: str = Depends(get_user_id_from_proxy),
+    topic: Optional[str] = None,
+    subject: Optional[str] = None,
+    limit: int = 10
+):
+    """Get a user's assessment history."""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    # Build query
+    query = {"user_id": user_id}
+
+    if topic:
+        query["topic"] = topic
+
+    if subject:
+        query["subject"] = subject
+
+    try:
+        # Query completed assessments
+        cursor = learning_db["assessments"].find(
+            query,
+            projection={
+                "assessment_id": 1,
+                "topic": 1,
+                "subject": 1,
+                "created_at": 1,
+                "completed_at": 1,
+                "completed": 1,
+                "score": 1,
+                "difficulty": 1,
+                "mastery_before": 1,
+                "mastery_after": 1
+            }
+        ).sort("created_at", -1).limit(limit)
+
+        assessments = await cursor.to_list(length=limit)
+
+        # Convert ObjectId to string for each assessment
+        for assessment in assessments:
+            assessment["_id"] = str(assessment["_id"])
+
+            # Add question count
+            question_count = await learning_db["assessments"].count_documents(
+                {"assessment_id": assessment["assessment_id"]},
+                {"$expr": {"$size": "$questions"}}
+            )
+            assessment["question_count"] = question_count
+
+        return assessments
+
+    except Exception as e:
+        logger.error(
+            f"Error retrieving assessment history for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve assessment history")
 
 
 @app.get("/healthcheck")
