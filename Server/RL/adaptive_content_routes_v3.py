@@ -3476,7 +3476,7 @@ async def evaluate_assessment(
     if not session:
         raise HTTPException(status_code=404, detail="User session not found.")
 
-    # Find the learning path entry for this assessment to get mastery_at_request
+    # Find the learning path entry for this assessment to get original topic and mastery_at_request
     interaction_log = None
     for i, interaction in enumerate(session.learning_path):
         if isinstance(interaction, dict) and interaction.get("assessment_id") == request.assessment_id:
@@ -3486,8 +3486,35 @@ async def evaluate_assessment(
     if not interaction_log:
         logger.warning(
             f"Assessment {request.assessment_id} not found in learning path")
-        # Create a default interaction log if not found
-        interaction_log = {"mastery_at_request": 0.0}
+        interaction_log = {"mastery_at_request": 0.0,
+                           "topic": assessment.get("topic", "")}
+
+    # Get the topic from the interaction log (this is the EXACT key used in state.mastery)
+    original_topic = interaction_log.get("topic", assessment.get("topic", ""))
+    assessment_topic = assessment.get("topic", original_topic)
+
+    # CRITICAL: Find the correct topic key in state.mastery that matches our topic
+    state_topic_key = original_topic  # Default to original topic
+    if original_topic not in session.state.mastery:
+        # Try to find the best matching topic if exact match not found
+        best_match = None
+        best_score = 0
+        for topic_key in session.state.mastery:
+            # Check for topic contained in key or key contained in topic (handles Science-Topic vs Topic)
+            if original_topic in topic_key or topic_key in original_topic:
+                score = len(set(original_topic.lower().split())
+                            & set(topic_key.lower().split()))
+                if score > best_score:
+                    best_score = score
+                    best_match = topic_key
+
+        if best_match:
+            state_topic_key = best_match
+            logger.info(
+                f"Topic key mapping: '{original_topic}' → '{state_topic_key}'")
+        else:
+            logger.warning(
+                f"No matching topic found for '{original_topic}' in state.mastery")
 
     # Evaluate responses
     evaluation_tasks = []
@@ -3506,8 +3533,8 @@ async def evaluate_assessment(
             student_response=student_response,
             correct_answer=question.get("correct_answer", ""),
             question_type=question.get("exercise_type", "short_answer"),
-            topic=assessment["topic"],
-            subject=assessment["subject"],
+            topic=assessment_topic,
+            subject=assessment.get("subject", ""),
             grade=session.profile.grade
         )
         evaluation_tasks.append((question_id, task))
@@ -3531,56 +3558,61 @@ async def evaluate_assessment(
     average_score = total_score / question_count if question_count > 0 else 0
 
     # Update student mastery based on assessment results
-    topic = assessment["topic"]
     student_state = session.state
 
     # Get the mastery at the time of request from the interaction log
     mastery_at_request = interaction_log.get("mastery_at_request", 0.0)
 
-    # Current mastery is what's in the state now
-    current_mastery = student_state.mastery.get(topic, mastery_at_request)
+    # Current mastery is what's in the state now for the CORRECT topic key
+    current_mastery = student_state.mastery.get(
+        state_topic_key, mastery_at_request)
 
-    # Calculate mastery impact
+    # Calculate mastery impact based on assessment performance
     mastery_impact = 0
 
     if average_score >= 90:
-        # Outstanding performance – strong evidence of mastery.
+        # Outstanding performance
         mastery_impact = 0.20
     elif average_score >= 80:
-        # Excellent performance – solid grasp of concepts.
+        # Excellent performance
         mastery_impact = 0.15
     elif average_score >= 70:
-        # Good performance – demonstrates understanding with minor gaps.
+        # Good performance
         mastery_impact = 0.10
     elif average_score >= 60:
-        # Decent performance – some inconsistencies but overall grasp is there.
+        # Decent performance
         mastery_impact = 0.05
     elif average_score >= 50:
-        # Emerging understanding – effort visible, needs more consistency.
+        # Emerging understanding
         mastery_impact = 0.02
     elif average_score >= 40:
-        # Foundational knowledge – potential is there, encourage progress.
+        # Foundational knowledge
         mastery_impact = 0.01
     elif average_score >= 30:
-        # Struggling – requires additional support and practice.
+        # Struggling
         mastery_impact = -0.02
     elif average_score >= 20:
-        # Significant gaps – learner is disengaged or lacking basics.
+        # Significant gaps
         mastery_impact = -0.05
     elif average_score >= 10:
-        # Very low performance – minimal understanding, at-risk learner.
+        # Very low performance
         mastery_impact = -0.08
     else:
-        # Critical concern – no meaningful engagement or grasp of content.
+        # Critical concern
         mastery_impact = -0.10
 
-    student_state.previous_mastery[topic] = current_mastery
+    # IMPORTANT: Store the current mastery in previous_mastery for RL state tracking
+    student_state.previous_mastery[state_topic_key] = current_mastery
 
     # Update mastery, ensuring it stays between 0 and 1
     new_mastery = min(1.0, max(0.0, current_mastery + mastery_impact))
-    student_state.mastery[topic] = new_mastery
+    student_state.mastery[state_topic_key] = new_mastery
 
-    # Update recent performance in RL state
+    # Log the actual mastery update for debugging
+    logger.info(
+        f"Mastery update for '{state_topic_key}': {current_mastery:.4f} → {new_mastery:.4f} (impact: {mastery_impact:.4f})")
+
+    # Update recent performance in RL state for future recommendations
     normalized_score = average_score / 100.0
     student_state.recent_performance = np.clip(
         0.6 * student_state.recent_performance + 0.4 * normalized_score, 0.0, 1.0
@@ -3600,8 +3632,8 @@ async def evaluate_assessment(
     # Track misconceptions if score is low
     if average_score < 50:
         misconception_strength = (50 - average_score) / 50 * 0.7
-        session.state.misconceptions[topic] = max(
-            session.state.misconceptions.get(topic, 0.0),
+        student_state.misconceptions[state_topic_key] = max(
+            student_state.misconceptions.get(state_topic_key, 0.0),
             misconception_strength
         )
 
@@ -3618,6 +3650,7 @@ async def evaluate_assessment(
         0.1, 0.95
     )
 
+    # Update the learning path entry
     for i, interaction in enumerate(session.learning_path):
         if isinstance(interaction, dict) and interaction.get("assessment_id") == request.assessment_id:
             # Update the learning path entry with assessment results
@@ -3633,7 +3666,7 @@ async def evaluate_assessment(
                 f"Updated learning path for assessment {request.assessment_id} with mastery changes")
             break
 
-    # Save session changes
+    # Save session changes with updated RL state
     await save_student_session_mongo(session)
 
     # Update assessment in database
@@ -3648,7 +3681,8 @@ async def evaluate_assessment(
                 "completed_at": datetime.now(timezone.utc),
                 "mastery_at_request": mastery_at_request,
                 "mastery_before": current_mastery,
-                "mastery_after": new_mastery
+                "mastery_after": new_mastery,
+                "topic_key_used": state_topic_key  # Add this field for debugging
             }
         }
     )
@@ -3681,6 +3715,7 @@ async def evaluate_assessment(
         "mastery_before": current_mastery,
         "mastery_after": new_mastery,
         "mastery_change": new_mastery - current_mastery,
+        "topic_key_used": state_topic_key,  # Add this field for debugging
         "evaluations": evaluations,
         "common_misconceptions": common_misconceptions,
         "common_gaps": common_gaps,
@@ -3696,23 +3731,24 @@ async def get_assessment_history(
     user_id: str = Depends(get_user_id_from_proxy),
     topic: Optional[str] = None,
     subject: Optional[str] = None,
-    limit: int = 10
+    limit: int = 100,
+    completed_only: bool = False
 ):
-    """Get a user's assessment history."""
+    """Get a user's assessment history with optional filtering."""
     if learning_db is None:
         raise HTTPException(status_code=503, detail="DB unavailable")
 
-    # Build query
+    # Build query with filters
     query = {"user_id": user_id}
-
     if topic:
         query["topic"] = topic
-
     if subject:
         query["subject"] = subject
+    if completed_only:
+        query["completed"] = True
 
     try:
-        # Query completed assessments
+        # Project only the necessary fields for listing
         cursor = learning_db["assessments"].find(
             query,
             projection={
@@ -3725,22 +3761,23 @@ async def get_assessment_history(
                 "score": 1,
                 "difficulty": 1,
                 "mastery_before": 1,
-                "mastery_after": 1
+                "mastery_after": 1,
+                "questions": 1  # Include questions to calculate count without extra query
             }
         ).sort("created_at", -1).limit(limit)
 
         assessments = await cursor.to_list(length=limit)
 
-        # Convert ObjectId to string for each assessment
+        # Process each assessment
         for assessment in assessments:
+            # Convert ObjectId to string
             assessment["_id"] = str(assessment["_id"])
 
-            # Add question count
-            question_count = await learning_db["assessments"].count_documents(
-                {"assessment_id": assessment["assessment_id"]},
-                {"$expr": {"$size": "$questions"}}
-            )
-            assessment["question_count"] = question_count
+            # Calculate question count efficiently without extra query
+            assessment["question_count"] = len(assessment.get("questions", []))
+
+            # Remove the full questions array to reduce response size
+            assessment.pop("questions", None)
 
         return assessments
 
