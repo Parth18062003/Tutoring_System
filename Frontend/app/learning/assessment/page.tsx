@@ -1,17 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AssessmentDisplay } from "@/components/assessment/assessment-display";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Select,
@@ -21,11 +20,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ArrowLeft, BookOpen } from "lucide-react";
 
 export default function AssessmentPage() {
   const router = useRouter();
-  const [subject, setSubject] = useState("");
-  const [topic, setTopic] = useState("");
+  const searchParams = useSearchParams();
+  
+  // Get subject and topic from URL parameters
+  const subjectFromUrl = searchParams.get("subject") || "";
+  const topicFromUrl = searchParams.get("topic") || "";
+  
   const [questionCount, setQuestionCount] = useState("5");
   const [isStarted, setIsStarted] = useState(false);
 
@@ -38,13 +42,13 @@ export default function AssessmentPage() {
   };
 
   const handleStart = () => {
-    if (!subject.trim()) {
-      toast.error("Please enter a subject");
+    if (!subjectFromUrl) {
+      toast.error("Subject is missing from URL parameters");
       return;
     }
 
-    if (!topic.trim()) {
-      toast.error("Please enter a topic");
+    if (!topicFromUrl) {
+      toast.error("Topic is missing from URL parameters");
       return;
     }
 
@@ -52,46 +56,53 @@ export default function AssessmentPage() {
   };
 
   const handleComplete = (result: any) => {
-    // Could navigate to results page or handle in some other way
     console.log("Assessment completed", result);
   };
+
+  // Redirect if subject or topic are missing
+  useEffect(() => {
+    if (!subjectFromUrl || !topicFromUrl) {
+      toast.error("Missing subject or topic parameters");
+      // Optional: redirect to a selection page after a delay
+      setTimeout(() => router.push("/learning"), 2000);
+    }
+  }, [subjectFromUrl, topicFromUrl, router]);
 
   return (
     <div className="container py-8">
       {!isStarted ? (
         <Card className="max-w-lg mx-auto">
           <CardHeader>
-            <CardTitle className="text-2xl">Start an Assessment</CardTitle>
+            <div className="flex items-center gap-2 mb-4">
+              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <BookOpen className="h-5 w-5 text-primary" />
+              <CardTitle className="text-2xl">Assessment</CardTitle>
+            </div>
             <CardDescription>
-              Test your knowledge with personalized questions and receive
-              instant feedback
+              Test your knowledge on {topicFromUrl} in {subjectFromUrl} with personalized questions and receive instant feedback
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                placeholder="Mathematics, Science, etc."
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-              />
+          <CardContent>
+            <div className="bg-muted/50 rounded-md p-4 mb-6">
+              <h3 className="font-medium mb-2">About this assessment</h3>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Subject:</span>
+                  <span className="font-medium">{subjectFromUrl}</span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Topic:</span>
+                  <span className="font-medium">{topicFromUrl}</span>
+                </li>
+              </ul>
             </div>
-
+            
             <div className="space-y-2">
-              <Label htmlFor="topic">Topic</Label>
-              <Input
-                id="topic"
-                placeholder="Fractions, Photosynthesis, etc."
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="question-count">Number of Questions</Label>
+              <label className="text-sm font-medium">Number of Questions</label>
               <Select value={questionCount} onValueChange={setQuestionCount}>
-                <SelectTrigger id="question-count">
+                <SelectTrigger>
                   <SelectValue placeholder="Select question count" />
                 </SelectTrigger>
                 <SelectContent>
@@ -102,16 +113,17 @@ export default function AssessmentPage() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="pt-4 flex justify-end">
-              <Button onClick={handleStart}>Start Assessment</Button>
-            </div>
           </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button onClick={handleStart} disabled={!subjectFromUrl || !topicFromUrl}>
+              Start Assessment
+            </Button>
+          </CardFooter>
         </Card>
       ) : (
         <AssessmentDisplay
-          subject={subject}
-          topic={topic}
+          subject={subjectFromUrl}
+          topic={topicFromUrl}
           questionCount={parseInt(questionCount, 10)}
           onBack={handleBack}
           onComplete={handleComplete}

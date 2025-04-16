@@ -209,7 +209,6 @@ export default function Library() {
             <TabsList>
               <TabsTrigger value="all">All Content</TabsTrigger>
               <TabsTrigger value="lesson">Lessons</TabsTrigger>
-              <TabsTrigger value="assessment">Assessments</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -385,7 +384,7 @@ export default function Library() {
               <div className="text-4xl">📚</div>
               <h3 className="text-lg font-medium">No saved content yet</h3>
               <p className="text-muted-foreground">
-                Save lessons and assessments to access them anytime.
+                Save lessons and learning content to access them anytime.
               </p>
               <Button
                 variant="default"
