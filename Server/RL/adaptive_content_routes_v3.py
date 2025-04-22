@@ -12,7 +12,7 @@ import re
 import copy
 from contextlib import asynccontextmanager
 import time
-from fastapi import FastAPI, HTTPException, Depends, Header, status
+from fastapi import FastAPI, HTTPException, Depends, Header, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import StreamingResponse
 from pydantic import BaseModel, Field, ConfigDict
@@ -23,6 +23,7 @@ from neo4j import GraphDatabase, exceptions as neo4j_exceptions
 from langchain_mistralai.embeddings import MistralAIEmbeddings
 from langchain_core.embeddings import Embeddings as LangChainEmbeddings
 from together_ai import TogetherAIClient
+from open_router import OpenRouterClient
 from config import load_config
 from difflib import SequenceMatcher
 import base64
@@ -130,9 +131,14 @@ EMBEDDING_MODEL_NAME = os.environ.get("EMBEDDING_MODEL_NAME")
 TOGETHER_API_KEY = os.environ.get("TOGETHER_API_KEY")
 TOGETHER_MODEL = os.environ.get(
     "TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free")
+OPEN_ROUTER_API_KEY = os.environ.get(
+    "OPEN_ROUTER_API_KEY")
+OPEN_ROUTER_MODEL = os.environ.get(
+    "OPEN_ROUTER_MODEL", "deepseek/deepseek-v3-base:free")
 logger = logging.getLogger("assessment_engine")
 logger = logging.getLogger("learning_analytics")
 together_client: Optional[TogetherAIClient] = None
+open_router_client: Optional[OpenRouterClient] = None
 
 try:
     EMBEDDING_DIMENSION = int(os.environ.get("EMBEDDING_DIMENSION"))
@@ -153,95 +159,6 @@ mongo_client: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None
 learning_db: Optional[motor.motor_asyncio.AsyncIOMotorDatabase] = None
 neo4j_driver: Optional[GraphDatabase.driver] = None
 embedding_client: Optional[LangChainEmbeddings] = None
-
-
-class StudentProfile(BaseModel):
-    student_id: str
-    grade: int = Field(default=6)
-    learning_style_preferences: Dict[str, float] = Field(
-        default_factory=lambda: {ls.name.lower(): 1.0 / len(LearningStyles)
-                                 for ls in LearningStyles if isinstance(ls, LearningStyles)}
-    )
-
-
-class StudentState(BaseModel):
-    mastery: Dict[str, float] = Field(default_factory=dict)
-    engagement: float = Field(default=0.7, ge=0.0, le=1.0)
-    attention: float = Field(default=0.8, ge=0.0, le=1.0)
-    cognitive_load: float = Field(default=0.4, ge=0.0, le=1.0)
-    motivation: float = Field(default=0.7, ge=0.0, le=1.0)
-    previous_mastery: Dict[str, float] = Field(default_factory=dict)
-    strategy_history_vector: List[float] = Field(
-        default_factory=lambda: [0.0] * NUM_STRATEGIES)
-    topic_attempts: Dict[str, float] = Field(default_factory=dict)
-    time_since_last_practiced: Dict[str, float] = Field(default_factory=dict)
-    misconceptions: Dict[str, float] = Field(default_factory=dict)
-    current_topic_idx_persistent: int = Field(default=-1)
-    recent_performance: float = Field(default=0.5, ge=0.0, le=1.0)
-    steps_on_current_topic: float = Field(default=0.0)
-
-
-class StudentSessionData(BaseModel):
-    student_id: str
-    profile: StudentProfile
-    state: StudentState
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc))
-    last_active: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc))
-    learning_path: List[Dict[str, Any]] = Field(default_factory=list)
-    knowledge_gaps: Dict[str, float] = Field(default_factory=dict,
-                                             description="Identified knowledge gaps by topic")
-
-    error_patterns: Dict[str, List[str]] = Field(default_factory=dict,
-                                                 description="Common mistake patterns for targeted remediation")
-
-    learning_trajectory: List[Dict[str, float]] = Field(default_factory=list,
-                                                        description="Historical mastery data for trend analysis")
-
-    affective_state: Dict[str, float] = Field(default_factory=lambda: {
-        "frustration": 0.1,
-        "confusion": 0.2,
-        "flow": 0.6,
-        "boredom": 0.1
-    }, description="Emotional state estimation")
-
-    def update_trajectory(self):
-        """Add current mastery snapshot to trajectory"""
-        snapshot = {
-            "timestamp": datetime.now(timezone.utc).timestamp(),
-            **self.mastery
-        }
-        self.learning_trajectory.append(snapshot)
-        if len(self.learning_trajectory) > 30:
-            self.learning_trajectory = self.learning_trajectory[-30:]
-
-    def detect_stagnation(self, topic: str, threshold: int = 3) -> bool:
-        """Detect if student is stuck on a topic despite multiple attempts"""
-        if topic not in self.topic_attempts or self.topic_attempts[topic] < threshold:
-            return False
-
-        if self.mastery.get(topic, 0) < 0.4 and self.topic_attempts[topic] >= threshold:
-            return True
-        return False
-
-
-class GenerationConfig(BaseModel):
-    model_config = ConfigDict(extra='allow', populate_by_name=True)
-    max_length: Optional[int] = Field(None, alias="num_predict")
-    temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
-    top_p: Optional[float] = Field(None, ge=0.0, le=1.0)
-    top_k: Optional[int] = Field(None, ge=1)
-
-
-class ContentRequest(BaseModel):
-    content_type: str
-    subject: str
-    topic: Optional[str] = None
-    subtopic: Optional[str] = None
-    previous_response: Optional[str] = None
-    user_input: Optional[str] = None
-    config: Optional[GenerationConfig] = None
 
 
 class InteractionMetadata(BaseModel):
@@ -269,6 +186,289 @@ class SessionFeedback(BaseModel):
     engagement_rating: Optional[int] = Field(None, ge=1, le=5)
     helpful_rating: Optional[int] = Field(None, ge=1, le=5)
     feedback_text: Optional[str] = None
+
+
+class StudentProfile(BaseModel):
+    student_id: str
+    grade: int = Field(default=6)
+    learning_style_preferences: Dict[str, float] = Field(
+        default_factory=lambda: {ls.name.lower(): 1.0 / len(LearningStyles)
+                                 for ls in LearningStyles if isinstance(ls, LearningStyles)}
+    )
+
+
+class StudentState(BaseModel):
+    mastery: Dict[str, float] = Field(default_factory=dict)
+    recent_performance: float = Field(default=0.5, ge=0.0, le=1.0)
+    engagement: float = Field(default=0.7, ge=0.0, le=1.0)
+    motivation: float = Field(default=0.7, ge=0.0, le=1.0)
+
+    topic_attempts: Dict[str, float] = Field(default_factory=dict)
+    time_since_last_practiced: Dict[str, float] = Field(default_factory=dict)
+    misconceptions: Dict[str, float] = Field(default_factory=dict)
+
+    previous_mastery: Dict[str, float] = Field(default_factory=dict)
+    strategy_history_vector: List[float] = Field(
+        default_factory=lambda: [0.0] * NUM_STRATEGIES)
+    current_topic_idx_persistent: int = Field(default=-1)
+    steps_on_current_topic: float = Field(default=0.0)
+
+    cognitive_load: float = Field(default=0.4, ge=0.0, le=1.0)
+    attention: float = Field(default=0.8, ge=0.0, le=1.0)
+
+    def update_core_metrics_from_assessment(self,
+                                            topic: str,
+                                            score: float,
+                                            time_spent_seconds: Optional[int] = None) -> float:
+        """Update core metrics based on assessment results and return mastery gain"""
+        mastery_before = self.mastery.get(topic, 0.0)
+        self.previous_mastery[topic] = mastery_before
+
+        norm_score = min(1.0, max(0.0, score / 100.0))
+        gain = 0.0
+
+        if norm_score >= 0.9:
+            gain = 0.20
+        elif norm_score >= 0.8:
+            gain = 0.15
+        elif norm_score >= 0.7:
+            gain = 0.10
+        elif norm_score >= 0.6:
+            gain = 0.05
+        elif norm_score >= 0.5:
+            gain = 0.02
+        elif norm_score >= 0.4:
+            gain = 0.01
+        elif norm_score >= 0.3:
+            gain = -0.02
+        elif norm_score >= 0.2:
+            gain = -0.05
+        else:
+            gain = -0.10
+
+        new_mastery = min(1.0, max(0.0, mastery_before + gain))
+        self.mastery[topic] = new_mastery
+
+        self.recent_performance = min(
+            1.0, max(0.0, 0.6 * self.recent_performance + 0.4 * norm_score))
+
+        if norm_score < 0.5:
+            misconception_strength = (0.5 - norm_score) * 0.7
+            self.misconceptions[topic] = max(
+                self.misconceptions.get(topic, 0.0),
+                misconception_strength
+            )
+
+        engagement_change = 0.03 if norm_score > 0.7 else -0.02
+        self.engagement = min(
+            0.95, max(0.1, self.engagement + engagement_change))
+
+        mot_chg = 0.0
+        if gain > 0.01:
+            mot_chg += 0.02
+        if gain > 0.05:
+            mot_chg += 0.03
+        if norm_score < 0.4:
+            mot_chg -= 0.03
+        self.motivation = min(0.95, max(0.1, self.motivation + mot_chg))
+
+        self.topic_attempts[topic] = self.topic_attempts.get(topic, 0.0) + 1.0
+
+        self.time_since_last_practiced[topic] = 0.0
+
+        return gain
+
+    def update_from_content_interaction(self,
+                                        topic: str,
+                                        completion_percentage: float,
+                                        helpful_rating: Optional[int] = None,
+                                        time_spent_seconds: Optional[int] = None) -> float:
+        """Update metrics based on content interaction and return mastery gain"""
+        mastery_before = self.mastery.get(topic, 0.0)
+        self.previous_mastery[topic] = mastery_before
+
+        norm_completion = min(1.0, max(0.0, completion_percentage / 100.0))
+        rate = 0.15
+        max_gain = max(0.05, (1.0 - mastery_before))
+        gain = rate * 0.5 * norm_completion * max_gain
+
+        mod = 1.0
+        if helpful_rating is not None:
+            norm_rating = (helpful_rating - 1) / 4.0
+            mod = 0.8 + (0.4 * norm_rating)
+        gain *= mod
+
+        new_mastery = min(1.0, max(0.0, mastery_before + gain))
+        self.mastery[topic] = new_mastery
+
+        self.topic_attempts[topic] = self.topic_attempts.get(topic, 0.0) + 1.0
+
+        self.time_since_last_practiced[topic] = 0.0
+
+        if helpful_rating is not None:
+            norm_rating = (helpful_rating - 1) / 4.0
+            self.engagement = min(
+                0.95, max(0.1, 0.7 * self.engagement + 0.3 * norm_rating))
+
+        mot_chg = 0.0
+        if gain > 0.01:
+            mot_chg += 0.02
+        if gain > 0.05:
+            mot_chg += 0.03
+        self.motivation = min(0.95, max(0.1, self.motivation + mot_chg))
+
+        return gain
+
+
+class StudentSessionData(BaseModel):
+    student_id: str
+    profile: StudentProfile
+    state: StudentState
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    last_active: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    learning_path: List[Dict[str, Any]] = Field(default_factory=list)
+    analytics: Dict[str, Any] = Field(default_factory=dict)
+
+    def detect_stagnation(self, topic: str, threshold: int = 3) -> bool:
+        """Detect if student is stuck on a topic despite multiple attempts"""
+        if topic not in self.state.topic_attempts or self.state.topic_attempts[topic] < threshold:
+            return False
+        if self.state.mastery.get(topic, 0) < 0.4 and self.state.topic_attempts[topic] >= threshold:
+            return True
+        return False
+
+    def prune_learning_path(self, max_entries: int = 100):
+        """Keep learning path from growing too large"""
+        if len(self.learning_path) > max_entries:
+            self.learning_path = self.learning_path[-max_entries:]
+
+    def update_analytics(self, topic: str = None):
+        """Compute analytics on-demand rather than storing everything"""
+        if topic:
+            if "per_topic_analytics" not in self.analytics:
+                self.analytics["per_topic_analytics"] = {}
+
+            self.analytics["per_topic_analytics"][topic] = {
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "attempts": self.state.topic_attempts.get(topic, 0),
+                "mastery": self.state.mastery.get(topic, 0),
+                "misconceptions": self.state.misconceptions.get(topic, 0),
+            }
+
+    def log_interaction(self, interaction_metadata: InteractionMetadata) -> Dict[str, Any]:
+        """Log an interaction to learning path with proper pruning"""
+        interaction_log = interaction_metadata.model_dump()
+        interaction_log["timestamp_utc"] = self.last_active.isoformat()
+        self.learning_path.append(interaction_log)
+        self.prune_learning_path()
+        return interaction_log
+
+    def update_from_assessment(self,
+                               assessment_id: str,
+                               topic: str,
+                               score: float,
+                               responses: List[Dict[str, Any]]) -> Dict[str, float]:
+        """Update metrics from assessment results and return delta values"""
+        mastery_before = self.state.mastery.get(topic, 0.0)
+        motivation_before = self.state.motivation
+        engagement_before = self.state.engagement
+
+        # Update core metrics
+        mastery_gain = self.state.update_core_metrics_from_assessment(
+            topic=topic,
+            score=score
+        )
+
+        for i, interaction in enumerate(self.learning_path):
+            if isinstance(interaction, dict) and interaction.get("assessment_id") == assessment_id:
+                self.learning_path[i].update({
+                    "completed": True,
+                    "score": score,
+                    "mastery_before_assessment": mastery_before,
+                    "mastery_after_assessment": self.state.mastery.get(topic, 0.0),
+                    "mastery_gain": mastery_gain,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "response_count": len(responses)
+                })
+                break
+
+        self.update_analytics(topic)
+
+        return {
+            "mastery_gain": mastery_gain,
+            "motivation_delta": self.state.motivation - motivation_before,
+            "engagement_delta": self.state.engagement - engagement_before
+        }
+
+    def update_from_content_feedback(self,
+                                     interaction_id: str,
+                                     feedback_data: SessionFeedback) -> Dict[str, float]:
+        """Update metrics based on content feedback and return delta values"""
+        interaction = None
+        idx = -1
+        for i, log in enumerate(self.learning_path):
+            if isinstance(log, dict) and log.get("interaction_id") == interaction_id:
+                interaction = log
+                idx = i
+                break
+
+        if not interaction:
+            return {"error": "Interaction not found"}
+
+        topic = interaction.get("topic")
+        if not topic:
+            return {"error": "Topic not found in interaction"}
+
+        mastery_before = self.state.mastery.get(topic, 0.0)
+        motivation_before = self.state.motivation
+        engagement_before = self.state.engagement
+
+        completion_percentage = feedback_data.completion_percentage or 80.0
+        helpful_rating = feedback_data.helpful_rating
+
+        mastery_gain = self.state.update_from_content_interaction(
+            topic=topic,
+            completion_percentage=completion_percentage,
+            helpful_rating=helpful_rating,
+            time_spent_seconds=feedback_data.time_spent_seconds
+        )
+
+        if idx >= 0:
+            details = feedback_data.model_dump()
+            details["feedback_received_utc"] = datetime.now(
+                timezone.utc).isoformat()
+            details["mastery_after_feedback"] = self.state.mastery.get(
+                topic, 0.0)
+            details["mastery_gain_from_feedback"] = mastery_gain
+            self.learning_path[idx].update(details)
+
+        self.update_analytics(topic)
+
+        return {
+            "mastery_gain": mastery_gain,
+            "motivation_delta": self.state.motivation - motivation_before,
+            "engagement_delta": self.state.engagement - engagement_before
+        }
+
+
+class GenerationConfig(BaseModel):
+    model_config = ConfigDict(extra='allow', populate_by_name=True)
+    max_length: Optional[int] = Field(None, alias="num_predict")
+    temperature: Optional[float] = Field(None, ge=0.0, le=2.0)
+    top_p: Optional[float] = Field(None, ge=0.0, le=1.0)
+    top_k: Optional[int] = Field(None, ge=1)
+
+
+class ContentRequest(BaseModel):
+    content_type: str
+    subject: str
+    topic: Optional[str] = None
+    subtopic: Optional[str] = None
+    previous_response: Optional[str] = None
+    user_input: Optional[str] = None
+    config: Optional[GenerationConfig] = None
 
 
 class AssessmentGenerateRequest(BaseModel):
@@ -300,7 +500,6 @@ class ExerciseGenerator:
                                           question_types: List[str] = None,
                                           provided_kg_context: str = "") -> List[Dict]:
         """Generate multiple exercises in a single API call"""
-        # Create a cache key for the batch
         cache_key = f"{topic}_{difficulty}_{','.join(misconceptions or [])}_{question_count}"
         if cache_key in self.cache:
             return self.cache[cache_key]
@@ -309,31 +508,27 @@ class ExerciseGenerator:
         if not kg_context and self.kg:
             kg_context = await self.get_topic_context(topic)
 
-        # Create a prompt requesting multiple questions
         prompt = self._create_batch_exercise_prompt(
             topic, difficulty, misconceptions, kg_context, question_count, question_types)
 
-        # Configure system prompt
         system_prompt = (
             "You are an expert educational content creator specializing in creating structured JSON responses. "
             "Your output must be valid JSON only. Format your entire response as a single JSON object with no "
             "additional text. Ensure proper escaping of quotes and special characters in JSON strings."
         )
 
-        # Initialize response text
         full_response = ""
 
         try:
-            # Stream chat completion in a non-streaming way for TogetherAI
             async for chunk in self.llm.stream_chat(
                 prompt=prompt,
-                model=os.environ.get(
-                    "TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
+                # model=os.environ.get("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
+                model=os.environ.get("OPEN_ROUTER_MODEL",
+                                     "deepseek/deepseek-v3-base:free"),
                 temperature=0.7,
                 max_tokens=4000,  # Increased token limit for multiple questions
                 system_prompt=system_prompt
             ):
-                # Process chunks
                 if isinstance(chunk, dict):
                     if "output" in chunk and isinstance(chunk["output"], dict) and "content" in chunk["output"]:
                         full_response += chunk["output"]["content"]
@@ -348,7 +543,6 @@ class ExerciseGenerator:
                 f"Error generating exercise batch: {e}", exc_info=True)
             full_response = "{\"questions\": []}"
 
-        # Parse the accumulated response
         exercises = self._parse_batch_exercises_response(
             full_response, question_count)
 
@@ -361,11 +555,9 @@ class ExerciseGenerator:
             return ""
 
         try:
-            # Clean up topic name for query
             topic_clean = topic.replace("-", "_").replace(" ", "_").lower()
             context = []
 
-            # First, try a simple query to get the concept
             basic_query = """
             MATCH (c:Concept {name: $topic})
             RETURN c.name as name, c.description as description
@@ -383,7 +575,6 @@ class ExerciseGenerator:
                 if data.get("description"):
                     context.append(f"Description: {data['description']}")
 
-            # Check if the relationship types exist before running the full query
             schema_check_query = """
             CALL db.schema.visualization()
             YIELD nodes, relationships
@@ -403,7 +594,6 @@ class ExerciseGenerator:
                 rel_types = schema_data.get("rel_types", [])
                 node_labels = schema_data.get("node_labels", [])
 
-                # Build dynamic query based on available schema
                 dynamic_query_parts = [
                     "MATCH (c:Concept {name: $topic})"
                 ]
@@ -462,7 +652,6 @@ class ExerciseGenerator:
                         context.append("Related concepts: " +
                                        ", ".join([r for r in data["related"] if r]))
 
-            # If still no good data, try fallback with broader text search
             if not context:
                 fallback_query = """
                 MATCH (c:Concept) 
@@ -505,7 +694,6 @@ class ExerciseGenerator:
         elif difficulty > 0.4:
             difficulty_desc = "intermediate"
 
-        # Default question types if not specified
         if not question_types:
             question_types = ["multiple_choice", "short_answer", "true_false"]
 
@@ -531,7 +719,6 @@ class ExerciseGenerator:
     Base your exercises on the factual information provided above to ensure NCERT curriculum alignment.
     """
 
-        # Create the prompt
         prompt = f"""Create {question_count} unique {difficulty_desc} level educational exercises about "{topic}" for a middle school student.
     {kg_section}
     {misconception_guidance}
@@ -580,7 +767,6 @@ class ExerciseGenerator:
         try:
             json_content = response
 
-            # Extract JSON content if wrapped
             if "```json" in response:
                 parts = response.split("```json")
                 if len(parts) > 1:
@@ -590,19 +776,15 @@ class ExerciseGenerator:
                 if len(parts) > 1:
                     json_content = parts[1].strip()
 
-            # Parse the batch response
             data = json.loads(json_content)
 
-            # Check if we have a questions array
             if "questions" in data and isinstance(data["questions"], list):
                 questions_batch = data["questions"]
 
                 for q in questions_batch:
-                    # Process each question in the batch
                     exercise = self._process_single_exercise(q)
                     exercises.append(exercise)
 
-            # If parsing failed or returned empty list, create fallback exercises
             if not exercises:
                 exercises = self._create_fallback_exercises(expected_count)
 
@@ -617,7 +799,6 @@ class ExerciseGenerator:
 
     def _process_single_exercise(self, exercise_data: Dict) -> Dict:
         """Process a single exercise object from the batch."""
-        # Add required fields if missing
         required_fields = ["question", "correct_answer", "explanation"]
         for field in required_fields:
             if field not in exercise_data:
@@ -627,7 +808,6 @@ class ExerciseGenerator:
             exercise_data["hint"] = "Think about the key concepts we've covered."
 
         if "exercise_type" not in exercise_data:
-            # Try to detect the type
             if "options" in exercise_data and isinstance(exercise_data["options"], list):
                 exercise_data["exercise_type"] = "multiple_choice"
             else:
@@ -639,7 +819,7 @@ class ExerciseGenerator:
 
         exercise_data["timestamp"] = datetime.now(timezone.utc).isoformat()
         exercise_data["source"] = "ai_generated"
-        exercise_data["id"] = str(uuid4())  # Add unique ID
+        exercise_data["id"] = str(uuid4())
 
         return exercise_data
 
@@ -1103,28 +1283,24 @@ class AssessmentEngine:
         """
 
         try:
-            # Configure system prompt
             system_prompt = (
                 "You are an expert educational assessment evaluator. "
                 "Respond with valid JSON only."
             )
 
-            # Initialize full response
             full_response = ""
 
-            # Stream chat completion to accumulate the full response
             async for chunk in self.llm.stream_chat(
                 prompt=prompt,
-                model=os.environ.get(
-                    "TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
-                temperature=0.2,  # Lower temperature for more consistent evaluation
+                # model=os.environ.get("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
+                model=os.environ.get("OPEN_ROUTER_MODEL",
+                                     "deepseek/deepseek-v3-base:free"),
+                temperature=0.2,
                 max_tokens=1000,
                 system_prompt=system_prompt
             ):
-                # Process chunks based on their structure
                 try:
                     if isinstance(chunk, dict):
-                        # Try various path structures in the chunk
                         if "output" in chunk and isinstance(chunk["output"], dict) and "content" in chunk["output"]:
                             full_response += chunk["output"]["content"]
                         elif "content" in chunk:
@@ -1132,15 +1308,12 @@ class AssessmentEngine:
                         elif "text" in chunk:
                             full_response += chunk["text"]
                     elif isinstance(chunk, str):
-                        # If chunk is a string, just add it
                         full_response += chunk
                 except Exception as e:
                     logger.error(f"Error processing chunk: {e}")
-                    # If there's an error, try to use the chunk as is
                     if isinstance(chunk, str):
                         full_response += chunk
 
-            # Extract JSON from response
             json_match = re.search(r'({.*})', full_response, re.DOTALL)
             if json_match:
                 full_response = json_match.group(1)
@@ -1168,7 +1341,6 @@ class AssessmentEngine:
         except Exception as e:
             logger.error(f"Error during LLM evaluation: {e}", exc_info=True)
 
-            # Fallback to basic evaluation
             similarity = SequenceMatcher(
                 None, student_response.lower(), correct_answer.lower()).ratio()
             score = int(similarity * 100)
@@ -1941,19 +2113,128 @@ class LearningAnalytics:
         }
 
 
+async def update_student_metrics_from_assessment(
+    session: StudentSessionData,
+    assessment_results: Dict[str, Any],
+    topic: str
+) -> Dict[str, float]:
+    """Consolidate all metric updates from assessment in one function"""
+    if not session or not assessment_results:
+        return {"error": "Invalid session or assessment results"}
+
+    score = assessment_results.get("average_score", 0)
+
+    result = session.update_from_assessment(
+        assessment_id=assessment_results.get("assessment_id", ""),
+        topic=topic,
+        score=score,
+        responses=assessment_results.get("responses", [])
+    )
+
+    await save_student_session_mongo(session)
+
+    return result
+
+
+async def optimize_session_storage(session: StudentSessionData) -> Dict[str, Any]:
+    """Optimize session storage by pruning unused metrics and limiting history"""
+    if not session:
+        return {"error": "Invalid session"}
+
+    original_path_length = len(session.learning_path)
+    session.prune_learning_path(max_entries=100)
+
+    if "per_topic_analytics" in session.analytics:
+        topics = list(session.analytics["per_topic_analytics"].keys())
+        if len(topics) > 20:
+            now = datetime.now(timezone.utc)
+            to_remove = []
+
+            for topic, data in session.analytics["per_topic_analytics"].items():
+                if "last_updated" in data:
+                    try:
+                        last_updated = datetime.fromisoformat(
+                            data["last_updated"])
+                        if (now - last_updated).days > 30:
+                            to_remove.append(topic)
+                    except ValueError:
+                        pass
+
+            for topic in to_remove:
+                session.analytics["per_topic_analytics"].pop(topic, None)
+
+    await save_student_session_mongo(session)
+
+    return {
+        "learning_path_pruned": original_path_length - len(session.learning_path),
+        "analytics_optimized": True
+    }
+
+
+async def migrate_to_optimized_model(db) -> Dict[str, Any]:
+    """Migrate existing sessions to the optimized data model"""
+    if not db:
+        return {"error": "Database unavailable"}
+
+    results = {
+        "processed": 0,
+        "optimized": 0,
+        "errors": 0
+    }
+
+    batch_size = 50
+    cursor = db["learning_states"].find({})
+
+    async for old_session_data in cursor:
+        try:
+            if "model_version" in old_session_data and old_session_data["model_version"] == "optimized":
+                results["processed"] += 1
+                continue
+
+            try:
+                session_id = old_session_data.get("student_id", str(uuid4()))
+                old_session_data.pop("_id", None)
+
+                session = StudentSessionData.model_validate(old_session_data)
+
+                session.prune_learning_path(max_entries=100)
+
+                session_dict = session.model_dump(mode='json')
+                session_dict["model_version"] = "optimized"
+
+                await db["learning_states"].update_one(
+                    {"student_id": session_id},
+                    {"$set": session_dict},
+                    upsert=True
+                )
+
+                results["optimized"] += 1
+
+            except Exception as e:
+                logger.error(f"Error converting session data: {e}")
+                results["errors"] += 1
+
+        except Exception as e:
+            logger.error(f"Migration error: {e}")
+            results["errors"] += 1
+
+        results["processed"] += 1
+
+    return results
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handles startup and shutdown events for resource initialization and cleanup."""
-    global rl_system, ollama_client, mongo_client, learning_db, neo4j_driver, embedding_client, mistral_client, together_client, config
+    global rl_system, ollama_client, mongo_client, learning_db, neo4j_driver, embedding_client, mistral_client, together_client, config, open_router_client
     global prompt_manager, response_validator
     config = load_config()
     logger.info(f"API v{config.api.version} server starting up...")
-
-    # Initialize prompt manager
+    logger.info(
+        f"OpenRouter API Key present: {bool(config.llm.open_router_api_key)}")
     prompt_manager = PromptManager()
     logger.info("Prompt Manager initialized")
 
-    # Initialize response validator
     response_validator = ResponseValidator()
     logger.info("Response Validator initialized")
     if config.rl.available and SB3_AVAILABLE:
@@ -2002,6 +2283,22 @@ async def lifespan(app: FastAPI):
                 f"Failed to initialize Together AI client: {e}", exc_info=True)
             together_client = None
 
+    if config.llm.open_router_api_key:
+        logger.info("Initializing Open Router client...")
+        try:
+            open_router_client = OpenRouterClient(
+                api_key=config.llm.open_router_api_key)
+            connection_valid = await open_router_client.test_connection()
+            if connection_valid:
+                logger.info("Open Router client connection verified.")
+            else:
+                logger.warning(
+                    "Open Router client initialization succeeded but connection test failed.")
+        except Exception as e:
+            logger.error(
+                f"Failed to initialize Open Router client: {e}", exc_info=True)
+            open_router_client = None
+
     if config.database.mongo_url and config.database.mongo_db_name:
         logger.info(f"Connecting to MongoDB at {config.database.mongo_url}...")
         try:
@@ -2048,7 +2345,6 @@ async def lifespan(app: FastAPI):
             )
             logger.info("LangChain MistralAI Embedding client initialized.")
 
-            # Also initialize direct Mistral client
             from mistralai import Mistral
             mistral_client = Mistral(api_key=config.embedding.mistral_api_key)
             logger.info("Mistral AI client initialized.")
@@ -2058,7 +2354,7 @@ async def lifespan(app: FastAPI):
             embedding_client = None
             mistral_client = None
 
-    if all(x is not None for x in [together_client, mongo_client, learning_db]):
+    if all(x is not None for x in [together_client, open_router_client, mongo_client, learning_db]):
         await init_advanced_its_components()
         logger.info("Advanced ITS capabilities enabled")
     else:
@@ -2100,7 +2396,8 @@ async def init_advanced_its_components():
     global config, exercise_generator, metacognitive_support, content_selector, spaced_repetition
 
     exercise_generator = ExerciseGenerator(
-        llm_client=together_client,
+        # llm_client=together_client,
+        llm_client=open_router_client,
         kg_client=neo4j_driver
     )
 
@@ -2332,15 +2629,12 @@ async def get_embedding_async(text: str) -> Optional[List[float]]:
         logger.warning("Direct Mistral client unavailable.")
         return None
 
-    # Generate cache key based on text content
     cache_key = hash(text)
 
-    # Check cache first
     if cache_key in embedding_cache:
         logger.debug("Using cached embedding")
         return embedding_cache[cache_key]
 
-    # Use a lock to prevent concurrent embedding requests
     async with embedding_lock:
         try:
             model_name = os.environ.get(
@@ -2359,11 +2653,9 @@ async def get_embedding_async(text: str) -> Optional[List[float]]:
                         f"CRITICAL: Embedding dimension mismatch! Got {len(emb)}, expected {EMBEDDING_DIMENSION}.")
                     return None
 
-                # Cache the result
                 embedding_cache[cache_key] = emb
 
-                # Add artificial delay to prevent rate limiting
-                await asyncio.sleep(0.5)  # 500ms delay between requests
+                await asyncio.sleep(0.5)
 
                 return emb
             else:
@@ -2374,10 +2666,8 @@ async def get_embedding_async(text: str) -> Optional[List[float]]:
             logger.error(
                 f"Error generating Mistral embedding: {e}", exc_info=True)
 
-            # For rate limit errors specifically
             if "429" in str(e) or "rate limit" in str(e).lower():
                 logger.warning("Rate limit hit - adding longer delay")
-                # Longer cooldown for rate limit errors
                 await asyncio.sleep(2.0)
 
             return None
@@ -2515,6 +2805,10 @@ async def stream_llm_response(prompt: str, model_id: str, config: Optional[Gener
         logger.error("Together AI client unavailable.")
         yield json.dumps({"error": "LLM service unavailable"}) + "\n"
         return
+    if open_router_client is None:
+        logger.error("Open Router client unavailable.")
+        yield json.dumps({"error": "LLM service unavailable"}) + "\n"
+        return
 
     try:
         temperature = 0.7
@@ -2532,8 +2826,8 @@ async def stream_llm_response(prompt: str, model_id: str, config: Optional[Gener
             "additional text. Ensure proper escaping of quotes and special characters in JSON strings."
         )
 
-        # Stream the response
-        async for chunk in together_client.stream_chat(
+        # async for chunk in together_client.stream_chat(
+        async for chunk in open_router_client.stream_chat(
             prompt=prompt,
             model=model_id,
             temperature=temperature,
@@ -2586,7 +2880,6 @@ async def diagnose_kg_issues(driver, chapter_name, database_name):
         return "Neo4j driver not available"
 
     try:
-        # List all available chapters
         chapters_query = """
         MATCH (c:Chapter)
         RETURN c.name AS chapter_name
@@ -2619,8 +2912,9 @@ async def get_next_content_stream(
     #    logger.error("Critical dependency unavailable (Ollama or MongoDB).")
     #    raise HTTPException(
     #       status_code=503, detail="Core services unavailable.")
-    if together_client is None or learning_db is None:
-        logger.error("Critical dependency unavailable (Together or MongoDB).")
+    if together_client is None or open_router_client is None or learning_db is None:
+        logger.error(
+            "Critical dependency unavailable (Together, Open Router or MongoDB).")
         raise HTTPException(
             status_code=503, detail="Core services unavailable.")
     use_rag = False
@@ -2724,7 +3018,6 @@ async def get_next_content_stream(
     query_text = request.subtopic if request.subtopic else final_topic_name.split(
         '-')[-1].replace('_', ' ')
     if use_rag and query_text and final_topic_name != "Default_Topic":
-        # First diagnose available chapters
         available_chapters = await diagnose_kg_issues(neo4j_driver, final_topic_name, NEO4J_DATABASE)
         logger.info(f"Available chapters: {available_chapters}")
 
@@ -2736,12 +3029,10 @@ async def get_next_content_stream(
             final_topic_name.split('-')[-1].strip()
         ]
 
-        # Try each alternative chapter name
         for chapter_try in chapter_name_alternatives:
             logger.info(
                 f"Trying KG retrieval with chapter name: '{chapter_try}'")
 
-            # Modified vector search query with more flexible matching
             vector_search_query = """
                 CALL db.index.vector.queryNodes($indexName, $topK, $queryVector) YIELD node, score
                 WHERE node:Chunk AND node.embedding IS NOT NULL
@@ -2793,13 +3084,12 @@ async def get_next_content_stream(
                         kg_used = True
                         logger.info(
                             f"KG context successfully retrieved with {len(records)} chunks")
-                        break  # Exit loop if successful
+                        break
 
             except Exception as e:
                 logger.error(
                     f"Error during KG search with '{chapter_try}': {e}", exc_info=True)
 
-        # If still no context found, try a plain text search
         if not kg_used:
             try:
                 topic_part = final_topic_name.split(
@@ -2854,7 +3144,6 @@ async def get_next_content_stream(
 
     content_specific_template = f"content_generation_{request.content_type}"
     if prompt_manager.get_template(content_specific_template):
-        # Format with specific template
         scaffolding_desc = {ScaffoldingLevel.NONE: "Standard content.", ScaffoldingLevel.HINTS: "Include subtle hints.",
                             ScaffoldingLevel.GUIDANCE: "Provide explicit step-by-step guidance/examples."}.get(
             scaffolding_choice, "Standard content.")
@@ -2876,7 +3165,6 @@ async def get_next_content_stream(
             feedback_instr=feedback_instr
         )
     else:
-        # Fallback to basic instructions
         content_specific_instructions = f"Generate {request.content_type} content about {final_topic_name}"
 
     prompt = prompt_manager.format_prompt(
@@ -2921,8 +3209,9 @@ async def get_next_content_stream(
     logger.info(
         f"User {user_id}: Streaming '{request.content_type}' for '{final_topic_name}'. KG Used: {kg_used}. Prep time: {proc_time:.2f}ms")
     # stream_generator = stream_llm_response(prompt, OLLAMA_MODEL, request.config)
+    # stream_generator = stream_llm_response(prompt, TOGETHER_MODEL, request.config)
     stream_generator = stream_llm_response(
-        prompt, TOGETHER_MODEL, request.config)
+        prompt, OPEN_ROUTER_MODEL, request.config)
     headers = {f"X-{k.replace('_', '-').title()}": str(v)
                for k, v in metadata.model_dump(exclude={'interaction_id'}).items() if v is not None}
     headers["X-Interaction-Id"] = metadata.interaction_id
@@ -2937,7 +3226,6 @@ async def response_processor(response_text):
         logger.error(
             f"Response validation error: {validation_result['error']}")
 
-    # Return the validated/fixed content
     return validation_result["content"]
 
 
@@ -2954,83 +3242,35 @@ async def submit_feedback(
         raise HTTPException(status_code=404, detail="User session not found.")
     now_utc = datetime.now(timezone.utc)
     session.last_active = now_utc
-    student_state = session.state
+
     try:
-        idx = -1
-        log = None
-        for i, l in enumerate(reversed(session.learning_path)):
-            if isinstance(l, dict) and l.get("interaction_id") == feedback_data.interaction_id:
-                log = l
-                idx = len(session.learning_path)-1-i
-                break
-        topic = log.get("topic") if log else None
-        m_before = student_state.mastery.get(topic, 0.) if topic else 0.
-        m_new = m_before
-        gain = 0.
-        if topic:
-            rate = 0.15
-            max_g = max(0.05, (1.-m_before))
-            score = 0.5
-            if feedback_data.assessment_score is not None:
-                norm = feedback_data.assessment_score/100.
-                score = norm
-                gain = rate*1.5*norm*max_g
-                if norm < 0.5:
-                    gain -= rate*0.3*(0.5-norm)
-                student_state.recent_performance = np.clip(
-                    0.6*student_state.recent_performance+0.4*norm, 0., 1.)
-            elif feedback_data.completion_percentage is not None:
-                norm = feedback_data.completion_percentage/100.
-                score = norm*0.8
-                gain = rate*0.5*norm*max_g
-            mod = 1.
-            if feedback_data.helpful_rating is not None:
-                norm = (feedback_data.helpful_rating-1)/4.
-                mod = 0.8+(0.4*norm)
-            gain *= mod
-            m_new = np.clip(m_before+gain, 0., 1.)
-            student_state.mastery[topic] = m_new
-            logger.info(
-                f"User {user_id}, Topic '{topic}': Mastery {m_before:.3f}->{m_new:.3f} (Gain:{gain:.4f})")
-        else:
+        update_result = session.update_from_content_feedback(
+            interaction_id=feedback_data.interaction_id,
+            feedback_data=feedback_data
+        )
+
+        if "error" in update_result:
             logger.warning(
-                f"User {user_id}: Cannot update mastery for {feedback_data.interaction_id}, topic unknown.")
-        if feedback_data.engagement_rating is not None:
-            norm = (feedback_data.engagement_rating-1)/4.
-            student_state.engagement = np.clip(
-                0.7*student_state.engagement+0.3*norm, 0.1, 0.95)
-        mot_chg = 0.
-        if gain > 0.01:
-            mot_chg += 0.02
-        if gain > 0.05:
-            mot_chg += 0.03
-        if feedback_data.helpful_rating is not None:
-            mot_chg += (feedback_data.helpful_rating-3)*0.015
-        if feedback_data.assessment_score is not None and feedback_data.assessment_score < 40:
-            mot_chg -= 0.03
-        student_state.motivation = np.clip(
-            student_state.motivation+mot_chg, 0.1, 0.95)
-        if idx != -1:
-            details = feedback_data.model_dump()
-            details["feedback_received_utc"] = now_utc.isoformat()
-            details["mastery_after_feedback"] = m_new
-            details["mastery_gain_from_feedback"] = gain
-            session.learning_path[idx].update(details)
-        if feedback_data.assessment_score and feedback_data.assessment_score < 50:
-            misconception_strength = (
-                50 - feedback_data.assessment_score) / 50 * 0.7
-            student_state.misconceptions[topic] = max(
-                student_state.misconceptions.get(topic, 0.0),
-                misconception_strength
-            )
-        else:
-            logger.warning(
-                f"User {user_id}: Could not log feedback details for {feedback_data.interaction_id}.")
+                f"User {user_id}: {update_result['error']}")
+            raise HTTPException(
+                status_code=404, detail=update_result["error"])
+
         await save_student_session_mongo(session)
+
+        if random.random() < 0.1:
+            await optimize_session_storage(session)
+
         proc_time = (time.monotonic()-start_time)*1000
         logger.info(
             f"User {user_id}: Feedback processed {feedback_data.interaction_id}. Time: {proc_time:.2f}ms")
-        return {"status": "success", "message": "Feedback processed."}
+
+        return {
+            "status": "success",
+            "message": "Feedback processed.",
+            "mastery_gain": update_result.get("mastery_gain", 0)
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Feedback error user {user_id}: {e}", exc_info=True)
         raise HTTPException(
@@ -3046,10 +3286,8 @@ async def save_content(
     if learning_db is None:
         raise HTTPException(status_code=503, detail="DB unavailable")
 
-    # Generate a unique ID for the saved content
     content_id = content_data.get("interaction_id") or str(uuid4())
 
-    # Prepare document for insertion
     save_doc = {
         "content_id": content_id,
         "user_id": user_id,
@@ -3099,7 +3337,6 @@ async def get_saved_content_list(
     if learning_db is None:
         raise HTTPException(status_code=503, detail="DB unavailable")
 
-    # Build query with filters
     query = {"user_id": user_id}
     if content_type:
         query["content_type"] = content_type
@@ -3107,7 +3344,6 @@ async def get_saved_content_list(
         query["subject"] = subject
 
     try:
-        # Project only the necessary fields for listing
         cursor = learning_db["saved_content"].find(
             query,
             projection={
@@ -3153,7 +3389,6 @@ async def get_saved_content(
         if not content:
             raise HTTPException(status_code=404, detail="Content not found")
 
-        # Update last viewed time
         await learning_db["saved_content"].update_one(
             {"content_id": content_id, "user_id": user_id},
             {"$set": {"last_viewed_at": datetime.now(timezone.utc)}}
@@ -3207,10 +3442,12 @@ async def generate_assessment(
     if together_client is None:
         raise HTTPException(status_code=503, detail="LLM service unavailable")
 
+    if open_router_client is None:
+        raise HTTPException(status_code=503, detail="LLM service unavailable")
+
     if learning_db is None:
         raise HTTPException(status_code=503, detail="DB unavailable")
 
-    # Get user session
     session = await get_student_session_mongo(user_id)
     if not session:
         raise HTTPException(status_code=404, detail="User session not found.")
@@ -3219,7 +3456,6 @@ async def generate_assessment(
     student_state = session.state
     student_profile = session.profile
 
-    # Use RL for assessment parameter prediction
     strategy = TeachingStrategies.ASSESSMENT
     topic_idx = 0
     difficulty_choice = DifficultyLevel.NORMAL
@@ -3236,7 +3472,6 @@ async def generate_assessment(
                 action, _ = rl_system.model.predict(
                     observation, deterministic=True)
                 action = action.astype(int)
-                # We'll override to ASSESSMENT below
                 strategy = TeachingStrategies(action[0])
                 topic_idx = action[1]
                 difficulty_choice = DifficultyLevel(action[2])
@@ -3255,10 +3490,8 @@ async def generate_assessment(
         logger.warning(
             f"User {user_id}: RL system unavailable for assessment. Using defaults.")
 
-    # Always override strategy to ASSESSMENT for this endpoint
     strategy = TeachingStrategies.ASSESSMENT
 
-    # Map topic if requested, similar to content/next endpoint
     final_topic_name = request.topic
     final_topic_idx = -1
     topic_map = {}
@@ -3286,9 +3519,7 @@ async def generate_assessment(
             logger.warning(
                 f"Topic idx {effective_topic_idx} out of bounds. Using user-provided topic.")
 
-    # Determine difficulty from RL choice or use request value or mastery-based calculation
     if request.difficulty is None:
-        # Use RL-predicted difficulty, adjusted by mastery
         mastery = student_state.mastery.get(final_topic_name, 0.3)
         base_diff = 0.5
         if unwrapped_env and hasattr(unwrapped_env, 'topic_base_difficulty') and 0 <= final_topic_idx < len(unwrapped_env.topic_base_difficulty):
@@ -3301,7 +3532,6 @@ async def generate_assessment(
     else:
         difficulty = request.difficulty
 
-    # Record metrics for this interaction
     prereq = 1.0
     if final_topic_idx != -1:
         prereq = calculate_prerequisite_satisfaction(
@@ -3320,7 +3550,6 @@ async def generate_assessment(
         logger.warning(
             "One or more RAG dependencies missing/invalid. RAG disabled for assessment.")
 
-    # Get KG context if RAG is available
     kg_context = ""
     kg_used = False
     query_text = final_topic_name.split('-')[-1].replace('_', ' ')
@@ -3334,7 +3563,6 @@ async def generate_assessment(
             final_topic_name.split('-')[-1].strip()
         ]
 
-        # Try each alternative chapter name
         for chapter_try in chapter_name_alternatives:
             logger.info(
                 f"Trying KG retrieval for assessment with chapter name: '{chapter_try}'")
@@ -3355,7 +3583,6 @@ async def generate_assessment(
                     f"KG context successfully retrieved for assessment on {final_topic_name}")
                 break
 
-    # Create metadata for the learning path
     metadata = InteractionMetadata(
         strategy=strategy.name,
         topic=final_topic_name,
@@ -3367,32 +3594,27 @@ async def generate_assessment(
         content_type="assessment",
         difficulty_level_desc=diff_desc,
         mastery_at_request=mastery,
-        # Convert np.float32 to Python float
         effective_difficulty_value=float(difficulty),
         prereq_satisfaction=prereq,
         kg_context_used=kg_used,
     )
 
-    # Update student state history
     update_student_state_history(
         student_state, final_topic_name, strategy.name, topic_map)
 
-    # Add to learning path
     interaction_log = metadata.model_dump()
     interaction_log["timestamp_utc"] = session.last_active.isoformat()
-    interaction_log["assessment_id"] = str(uuid4())  # Link to assessment
+    interaction_log["assessment_id"] = str(uuid4())
     session.learning_path.append(interaction_log)
 
-    # Save session with updated learning path
     await save_student_session_mongo(session)
 
-    # Initialize exercise generator
     exercise_generator = ExerciseGenerator(
-        llm_client=together_client,
+        # llm_client=together_client,
+        llm_client=open_router_client,
         kg_client=neo4j_driver
     )
 
-    # Get student misconceptions
     misconceptions = request.misconceptions
     if not misconceptions and final_topic_name in session.state.misconceptions:
         misconceptions = [final_topic_name]
@@ -3400,10 +3622,8 @@ async def generate_assessment(
     assessment_id = interaction_log["assessment_id"]
 
     try:
-        # Generate all questions in a single call
         questions = await exercise_generator.generate_multiple_exercises(
             topic=final_topic_name,
-            # Convert numpy float to Python float
             difficulty=float(difficulty),
             misconceptions=misconceptions,
             question_count=request.question_count,
@@ -3411,14 +3631,12 @@ async def generate_assessment(
             provided_kg_context=kg_context
         )
 
-        # Store assessment in database for later evaluation
         assessment_doc = {
             "assessment_id": assessment_id,
             "user_id": user_id,
             "topic": request.topic,
             "subject": request.subject,
             "questions": questions,
-            # Convert numpy float to Python float
             "difficulty": float(difficulty),
             "created_at": datetime.now(timezone.utc),
             "completed": False,
@@ -3428,13 +3646,11 @@ async def generate_assessment(
 
         await learning_db["assessments"].insert_one(assessment_doc)
 
-        # Return assessment
         return {
             "assessment_id": assessment_id,
             "topic": request.topic,
             "subject": request.subject,
             "questions": questions,
-            # Convert numpy float to Python float
             "difficulty": float(difficulty)
         }
 
@@ -3454,10 +3670,12 @@ async def evaluate_assessment(
     if together_client is None:
         raise HTTPException(status_code=503, detail="LLM service unavailable")
 
+    if open_router_client is None:
+        raise HTTPException(status_code=503, detail="LLM service unavailable")
+
     if learning_db is None:
         raise HTTPException(status_code=503, detail="DB unavailable")
 
-    # Get assessment from database
     assessment = await learning_db["assessments"].find_one({
         "assessment_id": request.assessment_id,
         "user_id": user_id
@@ -3466,17 +3684,15 @@ async def evaluate_assessment(
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
 
-    # Initialize assessment engine
     assessment_engine = AssessmentEngine(
-        llm_client=together_client
+        # llm_client=together_client
+        llm_client=open_router_client
     )
 
-    # Get user session
     session = await get_student_session_mongo(user_id)
     if not session:
         raise HTTPException(status_code=404, detail="User session not found.")
 
-    # Find the learning path entry for this assessment to get original topic and mastery_at_request
     interaction_log = None
     for i, interaction in enumerate(session.learning_path):
         if isinstance(interaction, dict) and interaction.get("assessment_id") == request.assessment_id:
@@ -3489,18 +3705,14 @@ async def evaluate_assessment(
         interaction_log = {"mastery_at_request": 0.0,
                            "topic": assessment.get("topic", "")}
 
-    # Get the topic from the interaction log (this is the EXACT key used in state.mastery)
     original_topic = interaction_log.get("topic", assessment.get("topic", ""))
     assessment_topic = assessment.get("topic", original_topic)
 
-    # CRITICAL: Find the correct topic key in state.mastery that matches our topic
-    state_topic_key = original_topic  # Default to original topic
+    state_topic_key = original_topic
     if original_topic not in session.state.mastery:
-        # Try to find the best matching topic if exact match not found
         best_match = None
         best_score = 0
         for topic_key in session.state.mastery:
-            # Check for topic contained in key or key contained in topic (handles Science-Topic vs Topic)
             if original_topic in topic_key or topic_key in original_topic:
                 score = len(set(original_topic.lower().split())
                             & set(topic_key.lower().split()))
@@ -3516,13 +3728,11 @@ async def evaluate_assessment(
             logger.warning(
                 f"No matching topic found for '{original_topic}' in state.mastery")
 
-    # Evaluate responses
     evaluation_tasks = []
     for response_data in request.responses:
         question_id = response_data.get("question_id")
         student_response = response_data.get("response")
 
-        # Find the question in the assessment
         question = next(
             (q for q in assessment["questions"] if q.get("id") == question_id), None)
         if not question:
@@ -3539,7 +3749,6 @@ async def evaluate_assessment(
         )
         evaluation_tasks.append((question_id, task))
 
-    # Process all evaluations
     evaluations = {}
     total_score = 0
 
@@ -3553,72 +3762,52 @@ async def evaluate_assessment(
                 f"Error evaluating response for question {question_id}: {e}", exc_info=True)
             evaluations[question_id] = {"error": str(e), "score": 0}
 
-    # Calculate overall score
     question_count = len(request.responses)
     average_score = total_score / question_count if question_count > 0 else 0
 
-    # Update student mastery based on assessment results
     student_state = session.state
 
-    # Get the mastery at the time of request from the interaction log
     mastery_at_request = interaction_log.get("mastery_at_request", 0.0)
 
-    # Current mastery is what's in the state now for the CORRECT topic key
     current_mastery = student_state.mastery.get(
         state_topic_key, mastery_at_request)
 
-    # Calculate mastery impact based on assessment performance
     mastery_impact = 0
 
     if average_score >= 90:
-        # Outstanding performance
         mastery_impact = 0.20
     elif average_score >= 80:
-        # Excellent performance
         mastery_impact = 0.15
     elif average_score >= 70:
-        # Good performance
         mastery_impact = 0.10
     elif average_score >= 60:
-        # Decent performance
         mastery_impact = 0.05
     elif average_score >= 50:
-        # Emerging understanding
         mastery_impact = 0.02
     elif average_score >= 40:
-        # Foundational knowledge
         mastery_impact = 0.01
     elif average_score >= 30:
-        # Struggling
         mastery_impact = -0.02
     elif average_score >= 20:
-        # Significant gaps
         mastery_impact = -0.05
     elif average_score >= 10:
-        # Very low performance
         mastery_impact = -0.08
     else:
-        # Critical concern
         mastery_impact = -0.10
 
-    # IMPORTANT: Store the current mastery in previous_mastery for RL state tracking
     student_state.previous_mastery[state_topic_key] = current_mastery
 
-    # Update mastery, ensuring it stays between 0 and 1
     new_mastery = min(1.0, max(0.0, current_mastery + mastery_impact))
     student_state.mastery[state_topic_key] = new_mastery
 
-    # Log the actual mastery update for debugging
     logger.info(
         f"Mastery update for '{state_topic_key}': {current_mastery:.4f} → {new_mastery:.4f} (impact: {mastery_impact:.4f})")
 
-    # Update recent performance in RL state for future recommendations
     normalized_score = average_score / 100.0
     student_state.recent_performance = np.clip(
         0.6 * student_state.recent_performance + 0.4 * normalized_score, 0.0, 1.0
     )
 
-    # Update motivation based on results
     mot_chg = 0.0
     if mastery_impact > 0.01:
         mot_chg += 0.02
@@ -3629,7 +3818,6 @@ async def evaluate_assessment(
     student_state.motivation = np.clip(
         student_state.motivation + mot_chg, 0.1, 0.95)
 
-    # Track misconceptions if score is low
     if average_score < 50:
         misconception_strength = (50 - average_score) / 50 * 0.7
         student_state.misconceptions[state_topic_key] = max(
@@ -3637,23 +3825,19 @@ async def evaluate_assessment(
             misconception_strength
         )
 
-    # Update engagement based on assessment completion
     student_state.engagement = np.clip(
         student_state.engagement + (0.03 if average_score > 70 else -0.02),
         0.1, 0.95
     )
 
-    # Update cognitive load
     cognitive_load_change = 0.03 if average_score < 45 else -0.02
     student_state.cognitive_load = np.clip(
         student_state.cognitive_load + cognitive_load_change,
         0.1, 0.95
     )
 
-    # Update the learning path entry
     for i, interaction in enumerate(session.learning_path):
         if isinstance(interaction, dict) and interaction.get("assessment_id") == request.assessment_id:
-            # Update the learning path entry with assessment results
             session.learning_path[i].update({
                 "completed": True,
                 "score": average_score,
@@ -3666,10 +3850,8 @@ async def evaluate_assessment(
                 f"Updated learning path for assessment {request.assessment_id} with mastery changes")
             break
 
-    # Save session changes with updated RL state
     await save_student_session_mongo(session)
 
-    # Update assessment in database
     await learning_db["assessments"].update_one(
         {"assessment_id": request.assessment_id},
         {
@@ -3682,12 +3864,11 @@ async def evaluate_assessment(
                 "mastery_at_request": mastery_at_request,
                 "mastery_before": current_mastery,
                 "mastery_after": new_mastery,
-                "topic_key_used": state_topic_key  # Add this field for debugging
+                "topic_key_used": state_topic_key
             }
         }
     )
 
-    # Aggregate common misconceptions and gaps
     all_misconceptions = []
     all_gaps = []
 
@@ -3705,7 +3886,6 @@ async def evaluate_assessment(
     common_gaps = [{"gap": g, "count": c}
                    for g, c in gap_counts.most_common(3)]
 
-    # Return evaluation results
     return {
         "assessment_id": request.assessment_id,
         "topic": assessment["topic"],
@@ -3715,7 +3895,7 @@ async def evaluate_assessment(
         "mastery_before": current_mastery,
         "mastery_after": new_mastery,
         "mastery_change": new_mastery - current_mastery,
-        "topic_key_used": state_topic_key,  # Add this field for debugging
+        "topic_key_used": state_topic_key,
         "evaluations": evaluations,
         "common_misconceptions": common_misconceptions,
         "common_gaps": common_gaps,
@@ -3738,7 +3918,6 @@ async def get_assessment_history(
     if learning_db is None:
         raise HTTPException(status_code=503, detail="DB unavailable")
 
-    # Build query with filters
     query = {"user_id": user_id}
     if topic:
         query["topic"] = topic
@@ -3748,7 +3927,6 @@ async def get_assessment_history(
         query["completed"] = True
 
     try:
-        # Project only the necessary fields for listing
         cursor = learning_db["assessments"].find(
             query,
             projection={
@@ -3762,21 +3940,17 @@ async def get_assessment_history(
                 "difficulty": 1,
                 "mastery_before": 1,
                 "mastery_after": 1,
-                "questions": 1  # Include questions to calculate count without extra query
+                "questions": 1
             }
         ).sort("created_at", -1).limit(limit)
 
         assessments = await cursor.to_list(length=limit)
 
-        # Process each assessment
         for assessment in assessments:
-            # Convert ObjectId to string
             assessment["_id"] = str(assessment["_id"])
 
-            # Calculate question count efficiently without extra query
             assessment["question_count"] = len(assessment.get("questions", []))
 
-            # Remove the full questions array to reduce response size
             assessment.pop("questions", None)
 
         return assessments
@@ -3788,10 +3962,92 @@ async def get_assessment_history(
             status_code=500, detail="Failed to retrieve assessment history")
 
 
+@app.get("/assessment/{assessment_id}")
+async def get_assessment_detail(
+    assessment_id: str,
+    user_id: str = Depends(get_user_id_from_proxy)
+):
+    """Get a specific assessment with full details including questions, responses and evaluations."""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    try:
+        assessment = await learning_db["assessments"].find_one({
+            "assessment_id": assessment_id,
+            "user_id": user_id
+        })
+
+        if not assessment:
+            raise HTTPException(status_code=404, detail="Assessment not found")
+
+        await learning_db["assessments"].update_one(
+            {"assessment_id": assessment_id, "user_id": user_id},
+            {"$set": {"last_viewed_at": datetime.now(timezone.utc)}}
+        )
+
+        assessment["_id"] = str(assessment["_id"])
+
+        session = await get_student_session_mongo(user_id)
+        if session:
+            for entry in session.learning_path:
+                if isinstance(entry, dict) and entry.get("assessment_id") == assessment_id:
+                    assessment["learning_path_data"] = {
+                        "mastery_at_request": entry.get("mastery_at_request"),
+                        "mastery_before_assessment": entry.get("mastery_before_assessment"),
+                        "mastery_after_assessment": entry.get("mastery_after_assessment"),
+                        "mastery_gain": entry.get("mastery_gain"),
+                        "timestamp_utc": entry.get("timestamp_utc"),
+                        "completed_at": entry.get("completed_at")
+                    }
+                    break
+
+        if "common_misconceptions" not in assessment and "evaluations" in assessment:
+            all_misconceptions = []
+            all_gaps = []
+
+            for eval_data in assessment["evaluations"].values():
+                if isinstance(eval_data, dict):
+                    all_misconceptions.extend(
+                        eval_data.get("misconceptions", []))
+                    all_gaps.extend(eval_data.get("knowledge_gaps", []))
+
+            from collections import Counter
+            misconception_counts = Counter(all_misconceptions)
+            gap_counts = Counter(all_gaps)
+
+            assessment["common_misconceptions"] = [{"misconception": m, "count": c}
+                                                   for m, c in misconception_counts.most_common(3)]
+            assessment["common_gaps"] = [{"gap": g, "count": c}
+                                         for g, c in gap_counts.most_common(3)]
+
+        return assessment
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error retrieving assessment {assessment_id} for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve assessment")
+
+
+@app.post("/admin/optimize-database", status_code=status.HTTP_202_ACCEPTED)
+async def optimize_database(cleanup_older_than_days: int = 90):
+    """Clean up and optimize database storage"""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    migration_result = await migrate_to_optimized_model(learning_db)
+
+    return {
+        "migration_result": migration_result
+    }
+
+
 @app.get("/healthcheck")
 async def healthcheck():
     """Provides health status of the API and its dependencies."""
-    deps = {"ollama": "unavailable", "together": "unavailable", "mongodb": "unavailable", "neo4j": "unavailable",
+    deps = {"ollama": "unavailable", "together": "unavailable", "open_router": "unavailable", "mongodb": "unavailable", "neo4j": "unavailable",
             "rl_model": "unavailable", "mistral_embed": "unavailable"}
     if ollama_client:
         try:
@@ -3829,6 +4085,13 @@ async def healthcheck():
             deps["together"] = "ok" if connection_valid else "auth_error"
         except Exception:
             deps["together"] = "error"
+
+    if open_router_client:
+        try:
+            connection_valid = await open_router_client.test_connection()
+            deps["open_router"] = "ok" if connection_valid else "auth_error"
+        except Exception:
+            deps["open_router"] = "error"
 
     if SB3_AVAILABLE and rl_system and rl_system.model:
         deps["rl_model"] = "loaded"

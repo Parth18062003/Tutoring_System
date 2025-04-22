@@ -193,44 +193,40 @@ class TeachingStrategies(Enum):
     INTERACTIVE = 5
     STORYTELLING = 6
     GAMIFICATION = 7
-    # PEER_LEARNING = 8 # Harder to simulate solo, excluded for now
     SPACED_REVIEW = 8
 
 
-NUM_STRATEGIES = len(TeachingStrategies)  # Now 9
+NUM_STRATEGIES = len(TeachingStrategies)
 
 
 class DifficultyLevel(Enum):
-    EASIER = 0   # Adjust difficulty downwards (-0.2)
-    NORMAL = 1   # Use base difficulty (0.0 adjustment)
-    HARDER = 2   # Adjust difficulty upwards (+0.2)
+    EASIER = 0
+    NORMAL = 1
+    HARDER = 2
 
 
 class ScaffoldingLevel(Enum):
-    NONE = 0        # No extra support
-    HINTS = 1       # Provide hints on request or with questions
-    GUIDANCE = 2    # Provide step-by-step guidance or worked examples
+    NONE = 0
+    HINTS = 1
+    GUIDANCE = 2
 
 
 class FeedbackType(Enum):
-    CORRECTIVE = 0   # Simple correct/incorrect
-    HINT = 1         # Hint towards the correct answer/process
-    ELABORATED = 2   # Explain why the answer is right/wrong
-    SOCRATIC = 3     # Ask guiding questions
+    CORRECTIVE = 0
+    HINT = 1
+    ELABORATED = 2
+    SOCRATIC = 3
 
 
 class ContentLength(Enum):
-    CONCISE = 0      # Shorter content piece
-    STANDARD = 1     # Normal length
-    DETAILED = 2     # Longer, more in-depth content
+    CONCISE = 0
+    STANDARD = 1
+    DETAILED = 2
 
 
 training_phases = [
-    # Phase 1: High Exploration, Focus on Basic Learning
     {'timesteps': 1_500_000, 'learning_rate': 3e-4, 'ent_coef': 0.015},
-    # Phase 2: Reduced Exploration, Refine Policy
     {'timesteps': 2_000_000, 'learning_rate': 1e-4, 'ent_coef': 0.005},
-    # Phase 3: Fine-tuning, Low LR, Low Entropy
     {'timesteps': 1_500_000, 'learning_rate': 5e-5, 'ent_coef': 0.002},
 ]
 TOTAL_TRAINING_STEPS = sum(p['timesteps'] for p in training_phases)

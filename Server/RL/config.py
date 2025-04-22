@@ -16,11 +16,9 @@ class LogLevel(str, Enum):
 
 
 class DatabaseConfig(BaseModel):
-    # MongoDB settings
     mongo_url: str = Field(default="", description="MongoDB connection string")
     mongo_db_name: str = Field(default="", description="MongoDB database name")
 
-    # Neo4j settings
     neo4j_uri: Optional[str] = Field(None, description="Neo4j connection URI")
     neo4j_username: str = Field("neo4j", description="Neo4j username")
     neo4j_password: Optional[str] = Field(None, description="Neo4j password")
@@ -28,23 +26,20 @@ class DatabaseConfig(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    # Together AI settings
     together_api_key: Optional[str] = Field(
         None, description="Together AI API key")
     together_model: str = Field("meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
                                 description="Together AI model to use")
 
-    # Ollama settings
     ollama_host: Optional[str] = Field(None, description="Ollama host address")
     ollama_model: str = Field(
         "mistral:latest", description="Ollama model to use")
 
-    # Cohere settings
-    cohere_api_key: Optional[str] = Field(None, description="Cohere API key")
-    cohere_model: str = Field(
-        "command-light", description="Cohere model to use")
+    open_router_api_key: Optional[str] = Field(
+        None, description="OpenRouter API key")
+    open_router_model: str = Field("deepseek/deepseek-v3-base:free",
+                                   description="OpenRouter model to use")
 
-    # Default generation parameters
     default_temperature: float = Field(0.7, ge=0.0, le=1.0)
     default_max_tokens: int = Field(4000, ge=100)
 
@@ -57,7 +52,6 @@ class EmbeddingConfig(BaseModel):
     embedding_dimension: Optional[int] = Field(
         None, description="Embedding dimension")
 
-    # OCR settings
     mistral_ocr_model: Optional[str] = Field(
         None, description="Mistral OCR model")
     mistral_extract_model: Optional[str] = Field(
@@ -104,8 +98,6 @@ class APIConfig(BaseModel):
     log_level: str = Field("INFO", description="Logging level")
     version: str = Field("0.7.1", description="API version")
 
-# Change from BaseSettings to BaseModel to avoid environment variable loading issues
-
 
 class AppConfig(BaseModel):
     """Application configuration"""
@@ -121,7 +113,6 @@ class AppConfig(BaseModel):
 def load_config() -> AppConfig:
     """Load and validate application configuration."""
     try:
-        # First create nested configuration objects from environment variables
         db_config = DatabaseConfig(
             mongo_url=os.getenv("MONGO_URL", ""),
             mongo_db_name=os.getenv("MONGO_DB_NAME", ""),
@@ -135,10 +126,11 @@ def load_config() -> AppConfig:
             together_api_key=os.getenv("TOGETHER_API_KEY"),
             together_model=os.getenv(
                 "TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
+            open_router_api_key=os.getenv("OPEN_ROUTER_API_KEY"),
+            open_router_model=os.getenv(
+                "OPEN_ROUTER_MODEL", "deepseek/deepseek-v3-base:free"),
             ollama_host=os.getenv("OLLAMA_HOST"),
             ollama_model=os.getenv("OLLAMA_MODEL", "mistral:latest"),
-            cohere_api_key=os.getenv("COHERE_API_KEY"),
-            cohere_model=os.getenv("COHERE_MODEL", "command-light"),
             default_temperature=float(os.getenv("DEFAULT_TEMPERATURE", "0.7")),
             default_max_tokens=int(os.getenv("DEFAULT_MAX_TOKENS", "4000"))
         )
@@ -187,7 +179,6 @@ def load_config() -> AppConfig:
                 os.getenv("MAX_TOTAL_CONTEXT_LENGTH", "3000"))
         )
 
-        # Now create the full AppConfig with properly nested objects
         config = AppConfig(
             database=db_config,
             llm=llm_config,
@@ -198,7 +189,6 @@ def load_config() -> AppConfig:
             rag=rag_config
         )
 
-        # Validate critical components
         if not config.database.mongo_url or not config.database.mongo_db_name:
             logger.warning("MongoDB configuration incomplete")
 
@@ -206,9 +196,9 @@ def load_config() -> AppConfig:
             logger.warning(
                 "Mistral API configuration incomplete. Embeddings may be unavailable.")
 
-        if not config.llm.together_api_key and not config.llm.ollama_host:
+        if not config.llm.together_api_key and not config.llm.open_router_api_key and not config.llm.ollama_host:
             logger.warning(
-                "No LLM providers configured (Together AI or Ollama)")
+                "No LLM providers configured (Together AI, Open Router or Ollama)")
 
         return config
     except Exception as e:

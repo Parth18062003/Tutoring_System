@@ -30,7 +30,6 @@ class PromptTemplate(BaseModel):
     def format(self, **kwargs) -> str:
         """Format the template with the provided parameters"""
         try:
-            # Validate that all required parameters are provided
             missing_params = [p for p in self.parameters if p not in kwargs]
             if missing_params:
                 raise ValueError(
@@ -54,10 +53,8 @@ class PromptManager:
         self.templates_path = templates_path or os.path.join(
             os.path.dirname(__file__), "prompt_templates")
 
-        # Core templates - will be extended by loading from files
         self._init_core_templates()
 
-        # Load templates from files if they exist
         if os.path.exists(self.templates_path):
             self._load_templates_from_files()
 
@@ -71,7 +68,6 @@ class PromptManager:
     def _register_content_generation_templates(self):
         """Register content generation prompt templates"""
 
-        # Base content generation template
         self.register_template(PromptTemplate(
             template_id="content_generation_base",
             category=PromptCategory.CONTENT_GENERATION,
@@ -163,7 +159,6 @@ class PromptManager:
             }
         ))
 
-        # Lesson-specific template
         self.register_template(PromptTemplate(
             template_id="content_generation_lesson",
             category=PromptCategory.CONTENT_GENERATION,
@@ -184,8 +179,6 @@ class PromptManager:
                 "feedback_instr": "Feedback instruction format"
             }
         ))
-
-        # Add more content templates as needed...
 
     def _register_assessment_templates(self):
         """Register assessment prompt templates"""
@@ -236,7 +229,6 @@ class PromptManager:
 
     def _register_rag_templates(self):
         """Register RAG-specific prompt templates"""
-        # Knowledge graph section template
         self.register_template(PromptTemplate(
             template_id="kg_context_section",
             category=PromptCategory.RAG,

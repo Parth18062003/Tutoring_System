@@ -4,3 +4,14 @@
 
 # pycache
 __pycache__/
+
+# cache
+cache*
+cache/*
+
+# Inside ncert_tutor_logs_v1, ignore everything...
+ncert_tutor_logs_v1/*
+
+# ...except the models folder
+!ncert_tutor_logs_v1/models/
+!ncert_tutor_logs_v1/models/**

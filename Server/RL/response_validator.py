@@ -1,4 +1,3 @@
-# filepath: d:\ITS\Server\RL\response_validator.py
 import json
 import re
 from typing import Dict, Any, List, Optional, Union, Tuple
@@ -14,7 +13,6 @@ class ContentSection(BaseModel):
     title: str
     contentMarkdown: Optional[str] = None
 
-    # Optional fields for different content types
     questionText: Optional[str] = None
     answerDetail: Optional[str] = None
     questionNumber: Optional[int] = None
@@ -42,9 +40,7 @@ class ContentResponse(BaseModel):
         if not content_type:
             return v
 
-        # Validate section structure based on content type
         if content_type == "lesson":
-            # Check for required section types
             required_types = ["lesson_introduction",
                               "lesson_core_concept", "lesson_summary"]
             found_types = [s.sectionType for s in v]
@@ -54,7 +50,6 @@ class ContentResponse(BaseModel):
                         f"Missing required section type for lesson: {req_type}")
 
         elif content_type in ["quiz", "assessment"]:
-            # Ensure all sections have questionText and answerDetail
             for i, section in enumerate(v):
                 if not section.questionText or not section.answerDetail:
                     logger.warning(
@@ -69,29 +64,25 @@ class ResponseValidator:
     @staticmethod
     def extract_json(response: str) -> Tuple[str, bool]:
         """Extract JSON from a response that might contain other text"""
-        # Look for JSON block
         try:
-            # Try simple loads first
             json.loads(response)
             return response, True
         except json.JSONDecodeError:
-            # Look for JSON in markdown code blocks
             json_match = re.search(
                 r'```(?:json)?\s*([\s\S]*?)\s*```', response)
             if json_match:
                 try:
                     json_str = json_match.group(1).strip()
-                    json.loads(json_str)  # Validate
+                    json.loads(json_str)
                     return json_str, True
                 except json.JSONDecodeError:
                     pass
 
-            # Try to find JSON object with regex
             json_match = re.search(r'(\{[\s\S]*\})', response)
             if json_match:
                 try:
                     json_str = json_match.group(1).strip()
-                    json.loads(json_str)  # Validate
+                    json.loads(json_str)
                     return json_str, True
                 except json.JSONDecodeError:
                     pass
@@ -105,7 +96,6 @@ class ResponseValidator:
 
         if not is_valid_json:
             logger.error(f"Failed to extract valid JSON from response")
-            # Return error response
             return {
                 "error": "invalid_json",
                 "message": "Failed to parse response as JSON",
@@ -122,11 +112,9 @@ class ResponseValidator:
         try:
             content = json.loads(json_str)
 
-            # Basic structure validation
             if not isinstance(content, dict):
                 raise ValueError("Response is not a JSON object")
 
-            # Ensure required top-level fields exist
             required_fields = ["contentType", "topic", "sections"]
             missing = [f for f in required_fields if f not in content]
             if missing:
@@ -139,18 +127,14 @@ class ResponseValidator:
                     elif field == "sections":
                         content["sections"] = []
 
-            # Ensure instructionalPlan exists
             if "instructionalPlan" not in content:
                 content["instructionalPlan"] = {}
 
-            # Ensure subject exists
             if "subject" not in content:
                 content["subject"] = "unknown"
 
-            # Validate sections
             if "sections" in content and isinstance(content["sections"], list):
                 for i, section in enumerate(content["sections"]):
-                    # Ensure section has required fields
                     if not isinstance(section, dict):
                         logger.warning(f"Section {i} is not an object")
                         continue
@@ -164,7 +148,6 @@ class ResponseValidator:
                     if "contentMarkdown" not in section:
                         section["contentMarkdown"] = ""
 
-            # Try to validate with Pydantic
             try:
                 validated = ContentResponse.model_validate(content)
                 content = validated.model_dump()
@@ -208,7 +191,6 @@ class ResponseValidator:
         try:
             assessment = json.loads(json_str)
 
-            # Ensure required fields
             required_fields = ["score", "correct", "feedback"]
             missing = [f for f in required_fields if f not in assessment]
             if missing:
@@ -222,14 +204,12 @@ class ResponseValidator:
                     elif field == "feedback":
                         assessment["feedback"] = "No feedback available."
 
-            # Ensure array fields
             array_fields = ["misconceptions", "knowledge_gaps", "reasoning_patterns",
                             "improvement_suggestions", "key_concepts_understood", "key_concepts_missed"]
             for field in array_fields:
                 if field not in assessment or not isinstance(assessment[field], list):
                     assessment[field] = []
 
-            # Validate score
             if "score" in assessment:
                 try:
                     score = float(assessment["score"])
