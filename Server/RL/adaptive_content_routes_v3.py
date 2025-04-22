@@ -4043,6 +4043,274 @@ async def optimize_database(cleanup_older_than_days: int = 90):
         "migration_result": migration_result
     }
 
+# Add this after your other route definitions, before the main block
+
+
+@app.get("/metrics/system")
+async def get_system_metrics():
+    """Get overall system usage metrics and statistics"""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    metrics = {}
+
+    # Content generation metrics
+    try:
+        content_pipeline = await learning_db["learning_states"].aggregate([
+            {"$unwind": "$learning_path"},
+            {"$match": {"learning_path.content_type": {"$exists": True}}},
+            {"$group": {
+                "_id": "$learning_path.content_type",
+                "count": {"$sum": 1},
+                "avg_helpful_rating": {"$avg": "$learning_path.helpful_rating"},
+                "avg_completion": {"$avg": "$learning_path.completion_percentage"}
+            }}
+        ]).to_list(length=100)
+
+        metrics["content_types"] = {item["_id"]: {
+            "count": item["count"],
+            "avg_helpful_rating": item.get("avg_helpful_rating"),
+            "avg_completion": item.get("avg_completion")
+        } for item in content_pipeline}
+    except Exception as e:
+        logger.error(f"Error getting content metrics: {e}", exc_info=True)
+        metrics["content_types"] = {"error": str(e)}
+
+    # Strategy effectiveness metrics
+    try:
+        strategy_pipeline = await learning_db["learning_states"].aggregate([
+            {"$unwind": "$learning_path"},
+            {"$match": {"learning_path.strategy": {"$exists": True}}},
+            {"$group": {
+                "_id": "$learning_path.strategy",
+                "count": {"$sum": 1},
+                "avg_mastery_gain": {"$avg": {
+                    "$subtract": ["$learning_path.mastery_after_feedback", "$learning_path.mastery_at_request"]
+                }}
+            }}
+        ]).to_list(length=100)
+
+        metrics["strategies"] = {item["_id"]: {
+            "count": item["count"],
+            "avg_mastery_gain": item.get("avg_mastery_gain")
+        } for item in strategy_pipeline}
+    except Exception as e:
+        logger.error(f"Error getting strategy metrics: {e}", exc_info=True)
+        metrics["strategies"] = {"error": str(e)}
+
+    # Assessment statistics
+    try:
+        assessment_stats = await learning_db["assessments"].aggregate([
+            {"$match": {"completed": True}},
+            {"$group": {
+                "_id": None,
+                "count": {"$sum": 1},
+                "avg_score": {"$avg": "$score"},
+                "avg_mastery_gain": {"$avg": {
+                    "$subtract": ["$mastery_after", "$mastery_before"]
+                }}
+            }}
+        ]).to_list(length=1)
+
+        if assessment_stats:
+            metrics["assessments"] = {
+                "total_completed": assessment_stats[0]["count"],
+                "avg_score": assessment_stats[0]["avg_score"],
+                "avg_mastery_gain": assessment_stats[0]["avg_mastery_gain"]
+            }
+        else:
+            metrics["assessments"] = {"total_completed": 0}
+    except Exception as e:
+        logger.error(f"Error getting assessment metrics: {e}", exc_info=True)
+        metrics["assessments"] = {"error": str(e)}
+
+    # Overall platform usage
+    try:
+        active_users = await learning_db["learning_states"].count_documents({
+            "last_active": {"$gt": datetime.now(timezone.utc) - timedelta(days=7)}
+        })
+
+        total_users = await learning_db["learning_states"].count_documents({})
+
+        metrics["users"] = {
+            "total": total_users,
+            "active_last_7days": active_users
+        }
+    except Exception as e:
+        logger.error(f"Error getting user metrics: {e}", exc_info=True)
+        metrics["users"] = {"error": str(e)}
+
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "metrics": metrics
+    }
+
+
+@app.get("/metrics/student/{student_id}")
+async def get_student_metrics(
+    student_id: str,
+    user_id: str = Depends(get_user_id_from_proxy)
+):
+    """Get detailed metrics for a specific student"""
+    # Only allow users to see their own metrics, or admin users
+    if user_id != student_id and user_id != "admin":
+        raise HTTPException(
+            status_code=403, detail="Not authorized to view these metrics")
+
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    analytics = LearningAnalytics(learning_db, neo4j_driver)
+
+    # Get comprehensive student analytics
+    student_analytics = await analytics.get_student_analytics(student_id)
+
+    # Generate mastery heatmap
+    mastery_heatmap = await analytics.generate_mastery_heatmap(student_id)
+
+    # Get assessment history summary
+    assessment_query = {"user_id": student_id, "completed": True}
+    assessment_cursor = learning_db["assessments"].find(
+        assessment_query,
+        projection={"score": 1, "topic": 1, "completed_at": 1,
+                    "mastery_before": 1, "mastery_after": 1}
+    ).sort("completed_at", -1).limit(50)
+
+    assessment_history = await assessment_cursor.to_list(length=50)
+    for item in assessment_history:
+        item["_id"] = str(item["_id"])
+
+    # Get learning paths and recently used strategies
+    session = await get_student_session_mongo(student_id)
+    recent_strategies = []
+    learning_path_sequence = []
+
+    if session:
+        for entry in session.learning_path[-20:]:
+            if isinstance(entry, dict):
+                strategy = entry.get("strategy")
+                if strategy:
+                    recent_strategies.append({
+                        "strategy": strategy,
+                        "timestamp": entry.get("timestamp_utc"),
+                        "topic": entry.get("topic")
+                    })
+
+                learning_path_sequence.append({
+                    "topic": entry.get("topic"),
+                    "timestamp": entry.get("timestamp_utc"),
+                    "content_type": entry.get("content_type"),
+                    "mastery_gain": entry.get("mastery_gain")
+                })
+
+    # Calculate trend data for visualization
+    mastery_trends = {}
+    if session and session.learning_path:
+        for entry in session.learning_path:
+            if isinstance(entry, dict) and "topic" in entry and "mastery_after_feedback" in entry and "timestamp_utc" in entry:
+                topic = entry["topic"]
+                if topic not in mastery_trends:
+                    mastery_trends[topic] = []
+
+                mastery_trends[topic].append({
+                    "timestamp": entry["timestamp_utc"],
+                    "mastery": entry["mastery_after_feedback"]
+                })
+
+    return {
+        "student_id": student_id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "summary": student_analytics,
+        "mastery_heatmap": mastery_heatmap.get("heatmap_image"),
+        "assessment_history": assessment_history,
+        "recent_strategies": recent_strategies,
+        "learning_path": learning_path_sequence,
+        "mastery_trends": mastery_trends
+    }
+
+
+@app.get("/metrics/topics")
+async def get_topic_metrics():
+    """Get metrics on topics across all students"""
+    if learning_db is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+
+    # Topic difficulty analysis
+    try:
+        topic_pipeline = await learning_db["learning_states"].aggregate([
+            {"$unwind": "$learning_path"},
+            {"$match": {
+                "learning_path.topic": {"$exists": True},
+                "learning_path.mastery_after_assessment": {"$exists": True},
+                "learning_path.mastery_at_request": {"$exists": True}
+            }},
+            {"$group": {
+                "_id": "$learning_path.topic",
+                "attempts": {"$sum": 1},
+                "avg_mastery": {"$avg": "$learning_path.mastery_after_assessment"},
+                "avg_mastery_gain": {"$avg": {
+                    "$subtract": ["$learning_path.mastery_after_assessment", "$learning_path.mastery_at_request"]
+                }}
+            }},
+            {"$sort": {"attempts": -1}}
+        ]).to_list(length=100)
+
+        topics_data = {item["_id"]: {
+            "attempts": item["attempts"],
+            "avg_mastery": item.get("avg_mastery"),
+            "avg_mastery_gain": item.get("avg_mastery_gain"),
+            "difficulty_estimate": 1.0 - (item.get("avg_mastery_gain") or 0)
+        } for item in topic_pipeline}
+
+        # Calculate topic clusters based on relationships in knowledge graph
+        topic_clusters = []
+        if neo4j_driver:
+            try:
+                with neo4j_driver.session(database=NEO4J_DATABASE) as session:
+                    result = session.run("""
+                    MATCH (c:Concept)-[r:RELATED_TO|PART_OF|PREREQUISITE_FOR]-(related:Concept)
+                    WITH c, collect(related) as relatedConcepts
+                    RETURN c.name as topic, [rel in relatedConcepts | rel.name] as related
+                    LIMIT 100
+                    """)
+
+                    concept_relations = [{"topic": record["topic"], "related": record["related"]}
+                                         for record in result]
+
+                    # Group into clusters
+                    processed = set()
+                    for relation in concept_relations:
+                        if relation["topic"] in processed:
+                            continue
+
+                        cluster = {relation["topic"]}
+                        cluster.update(relation["related"])
+                        processed.add(relation["topic"])
+                        processed.update(relation["related"])
+
+                        topic_clusters.append({
+                            "topics": list(cluster),
+                            "size": len(cluster)
+                        })
+
+            except Exception as e:
+                logger.error(
+                    f"Error getting knowledge graph clusters: {e}", exc_info=True)
+
+        return {
+            "topics": topics_data,
+            "clusters": topic_clusters,
+            "total_topics": len(topics_data),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting topic metrics: {e}", exc_info=True)
+        return {
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
 
 @app.get("/healthcheck")
 async def healthcheck():
