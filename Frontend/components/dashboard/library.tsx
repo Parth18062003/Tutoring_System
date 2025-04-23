@@ -195,9 +195,9 @@ export default function Library() {
 
   return (
     <div className="container p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <ReturnButtons/>
-        <h1 className="text-2xl font-bold mt-10">My Learning Library</h1>
+        <ReturnButtons />
+      <div className="flex items-center justify-start gap-4">
+        <h1 className="text-2xl font-bold">My Learning Library</h1>
       </div>
       <div className="space-y-2">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -209,6 +209,7 @@ export default function Library() {
             <TabsList>
               <TabsTrigger value="all">All Content</TabsTrigger>
               <TabsTrigger value="lesson">Lessons</TabsTrigger>
+              <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -342,7 +343,7 @@ export default function Library() {
 
               <CardFooter className="flex justify-between pt-3 border-t">
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() =>
                     handleViewContent(item.content_id, item.content_type)

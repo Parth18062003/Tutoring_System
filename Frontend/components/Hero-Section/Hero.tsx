@@ -4,9 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BrainCircuit, LineChart, Target, ArrowBigUpDash, Headset } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 
 const Hero = () => {
   const { resolvedTheme } = useTheme();
+  const router = useRouter();
+  const startLearning = () => {
+    router.push('/learning');
+  }
   return (
     <div className="mt-28 mb-12 md:mt-0 flex flex-col justify-center items-center min-h-screen w-full overflow-hidden">
             <div
@@ -180,10 +185,10 @@ const Hero = () => {
             transition={{ duration: 0.6, delay: 0.7 }}
             className="flex flex-wrap gap-4 justify-center"
           >
-            <button className="px-8 py-3 rounded-lg bg-[#7091e6] text-white font-medium hover:bg-[#5a7dd9] transition-colors shadow-lg shadow-[#7091e6]/20">
+            <button className="px-8 py-3 rounded-lg bg-[#7091e6] text-white font-medium hover:bg-[#5a7dd9] transition-colors shadow-lg shadow-[#7091e6]/20" onClick={startLearning}>
               Start Learning
             </button>
-            <button className="px-8 py-3 rounded-lg border border-[#7091e6]/30 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-[#7091e6]/10 transition-colors">
+            <button className="px-8 py-3 rounded-lg border border-[#7091e6]/30 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-[#7091e6]/10 transition-colors" >
               View Demo
             </button>
           </motion.div>

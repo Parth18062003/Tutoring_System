@@ -49,6 +49,7 @@ import {
 import { toast } from "sonner";
 import { format, subDays } from "date-fns";
 import { AssessmentHistory } from "@/types/assessment-types";
+import ReturnButtons from "@/components/return-buttons";
 
 export default function AssessmentHistoryPage() {
   const router = useRouter();
@@ -282,10 +283,8 @@ export default function AssessmentHistoryPage() {
   return (
     <div className="container p-6 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-4">
+          <ReturnButtons />
           <div>
             <h1 className="text-2xl font-bold">Assessment History</h1>
             <p className="text-muted-foreground text-sm">

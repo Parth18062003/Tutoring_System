@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { SavedContentViewer } from '@/components/learning/saved-content-viewer';
+import { SavedFlashcardViewer } from '@/components/learning/saved-flashcard-viewer';
+import ReturnButtons from '@/components/return-buttons';
 
 export default function SavedContentDetailPage() {
   const params = useParams();
@@ -36,7 +38,7 @@ export default function SavedContentDetailPage() {
   }, [contentId]);
 
   const handleBack = () => {
-    router.push('/library');
+    router.push('/dashboard/library');
   };
 
   if (loading) {
@@ -71,19 +73,40 @@ export default function SavedContentDetailPage() {
     );
   }
 
+  // Determine which content viewer to display based on content type
+  const renderContentViewer = () => {
+    // Check if the content is a flashcard type
+    if (content.contentType === "flashcards") {
+      return <SavedFlashcardViewer content={content} />;
+    }
+    
+    // Check if content has flashcard sections
+    const hasFlashcardSections = content.sections?.some(
+      (section: any) => section.sectionType === "flashcard"
+    );
+    
+    if (hasFlashcardSections) {
+      return <SavedFlashcardViewer content={content} />;
+    }
+    
+    // Default to regular content viewer for lessons, practice, etc.
+    return <SavedContentViewer content={content} />;
+  };
+
   return (
-    <div className="container p-6 ">
-      <div className="flex items-center gap-2 mb-6">
-        <Button variant="ghost" size="icon" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+    <div className="container p-6">
+      <div className="flex items-center gap-4 mb-6">
+        <ReturnButtons />
         <div>
           <h1 className="text-2xl font-bold">{content.title || content.topic}</h1>
-          <p className="text-sm text-muted-foreground">{content.subject} • Saved Content</p>
+          <p className="text-sm text-muted-foreground">
+            {content.subject} • 
+            {content.contentType === "flashcards" ? " Flashcards" : " Lesson"}
+          </p>
         </div>
       </div>
 
-      <SavedContentViewer content={content} />
+      {renderContentViewer()}
     </div>
   );
 }

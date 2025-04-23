@@ -1,13 +1,11 @@
-// app/learning/lesson/page.tsx
-'use client';
+"use client";
 
-import { ContentDisplay } from '@/components/learning/content-display';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReturnButtons from '@/components/return-buttons';
 
-const LessonPage = () => {
+const CheatsheetPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [params, setParams] = useState<{
@@ -61,14 +59,9 @@ const LessonPage = () => {
   return (
     <div className="container max-w-7xl p-6 mx-auto">
       <ReturnButtons />
-      <ContentDisplay
-        subjectId={params.subject}
-        topic={params.topic}
-        contentType="lesson"
-        onBack={handleBack}
-      />
+
     </div>
   );
 };
 
-export default LessonPage;
+export default CheatsheetPage;

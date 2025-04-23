@@ -4,10 +4,8 @@ import { headers } from 'next/headers';
 
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:8000";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { assessmentId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ assessmentId: string }> }) {
+  const params = await props.params;
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     

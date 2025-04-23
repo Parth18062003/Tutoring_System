@@ -73,5 +73,68 @@ export const THEMES = [
       dark: "oklch(0.532 0.157 131.589)",
     },
   },
+  {
+    name: "Ghibli Meadow",
+    value: "ghibli-meadow",
+    bg: "oklch(0.98 0.01 120)",
+    colors: {
+      light: "oklch(0.98 0.01 120)",
+      dark: "oklch(0.23 0.01 130)",
+    },
+  },
+  {
+    name: "Whispered Sky",
+    value: "whispered-sky",
+    bg: "oklch(0.98 0.01 240)",
+    colors: {
+      light: "oklch(0.98 0.01 240)",
+      dark: "oklch(0.23 0.01 240)",
+    },
+  },
+  {
+    name: "Tea House",
+    value: "tea-house",
+    bg: "oklch(0.98 0.01 60)",
+    colors: {
+      light: "oklch(0.98 0.01 60)",
+      dark: "oklch(0.23 0.01 60)",
+    },
+  }, 
+  {
+    name: "Peach Blossom",
+    value: "peach-blossom",
+    bg: "oklch(0.98 0.01 330)",
+    colors: {
+      light: "oklch(0.98 0.01 330)",
+      dark: "oklch(0.23 0.01 330)",
+    },
+  },
+  {
+    name: "Vintage Mint",
+    value: "vintage-mint",
+    bg: "oklch(0.98 0.01 150)",
+    colors: {
+      light: "oklch(0.98 0.01 150)",
+      dark: "oklch(0.23 0.01 150)",
+    },
+  },
+  {
+    name: "Midnight Forest",
+    value: "midnight-forest",
+    bg: "oklch(0.98 0.01 210)",
+    colors: {
+      light: "oklch(0.98 0.01 210)",
+      dark: "oklch(0.23 0.01 210)",
+    },
+  },
+  {
+    name: "Starlight Breeze",
+    value: "starlight-breeze",
+    bg: "oklch(0.98 0.01 300)",
+    colors: {
+      light: "oklch(0.98 0.01 300)",
+      dark: "oklch(0.23 0.01 300)",
+    },
+  }
 ];
 export type Theme = (typeof THEMES)[number];

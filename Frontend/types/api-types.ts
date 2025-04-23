@@ -47,6 +47,10 @@ export interface ContentRequest {
     contentMarkdown: string;
     questionText?: string;
     answerDetail?: string;
+    frontSide?: string;
+    backSide?: string;
+    difficulty?: string;
+    hint?: string;
   }
   
   export interface ContentResponse {

@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { CalendarEvent, CalendarView } from "./types"
 import { AgendaDaysToShow, EventGap, EventHeight, WeekCellsHeight } from "./constants"
-import { addHoursToDate } from "../utils"
+import { addHoursToDate } from "./utils"
 import { CalendarDndProvider } from "./calendar-dnd-context"
 import { MonthView } from "./month-view"
 import { WeekView } from "./week-view"

@@ -96,8 +96,11 @@ export const SUBJECTS = [
   
   export const CONTENT_TYPES = [
     { id: "lesson", name: "Lesson", description: "Core educational content" },
-    { id: "exercise", name: "Exercise", description: "Practice activities" },
     { id: "assessment", name: "Assessment", description: "Knowledge evaluation" },
-    { id: "summary", name: "Summary", description: "Brief topic overview" },
-    { id: "exploration", name: "Exploration", description: "In-depth discovery" }
+    { id: "flashcard", name: "Flashcard", description: "Quick recall cards for key facts" },
+    { id: "cheatsheet", name: "Cheatsheet", description: "Condensed reference material" },
+    { id: "mind_map", name: "Mind Map", description: "Visual representation of concepts" },
+    { id: "study_guide", name: "Study Guide", description: "Organized learning material for review" },
+    { id: "interactive_scenario", name: "Interactive Scenario", description: "Simulated learning experiences" }
   ];
+  

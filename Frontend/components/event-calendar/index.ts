@@ -15,7 +15,7 @@ export { CalendarDndProvider, useCalendarDnd } from "./calendar-dnd-context"
 
 // Constants and utility exports
 export * from "./constants"
-export * from "../utils"
+export * from "./utils"
 
 // Hook exports
 export * from "./use-current-time-indicator"
