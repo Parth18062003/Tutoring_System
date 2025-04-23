@@ -4,9 +4,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReturnButtons from '@/components/return-buttons';
-import { CheatsheetDisplay } from '@/components/learning/cheatsheet-display';
+import { InteractiveScenario } from '@/components/learning/interactive-scenario-display';
 
-const CheatsheetPage = () => {
+const InteractiveScenarioPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [params, setParams] = useState<{
@@ -60,14 +60,14 @@ const CheatsheetPage = () => {
   return (
     <div className="container max-w-7xl p-6 mx-auto">
       <ReturnButtons />
-      <CheatsheetDisplay
+      <InteractiveScenario
         subjectId={params.subject}
         topic={params.topic}
-        contentType="cheatsheet"
+        contentType="scenario"
         onBack={handleBack}
       />
     </div>
   );
 };
 
-export default CheatsheetPage;
+export default InteractiveScenarioPage;

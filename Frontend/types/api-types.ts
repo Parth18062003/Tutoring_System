@@ -51,6 +51,8 @@ export interface ContentRequest {
     backSide?: string;
     difficulty?: string;
     hint?: string;
+    questions?: string[];
+    concepts?: string[];
   }
   
   export interface ContentResponse {

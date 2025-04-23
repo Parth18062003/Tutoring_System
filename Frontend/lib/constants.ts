@@ -99,8 +99,8 @@ export const SUBJECTS = [
     { id: "assessment", name: "Assessment", description: "Knowledge evaluation" },
     { id: "flashcard", name: "Flashcard", description: "Quick recall cards for key facts" },
     { id: "cheatsheet", name: "Cheatsheet", description: "Condensed reference material" },
-    { id: "mind_map", name: "Mind Map", description: "Visual representation of concepts" },
-    { id: "study_guide", name: "Study Guide", description: "Organized learning material for review" },
-    { id: "interactive_scenario", name: "Interactive Scenario", description: "Simulated learning experiences" }
+    { id: "mindmap", name: "Mind Map", description: "Visual representation of concepts" },
+    { id: "study-guide", name: "Study Guide", description: "Organized learning material for review" },
+    { id: "interactive-scenario", name: "Interactive Scenario", description: "Simulated learning experiences" }
   ];
   

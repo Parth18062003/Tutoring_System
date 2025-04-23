@@ -210,6 +210,7 @@ export default function Library() {
               <TabsTrigger value="all">All Content</TabsTrigger>
               <TabsTrigger value="lesson">Lessons</TabsTrigger>
               <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
+              <TabsTrigger value="cheatsheet">Cheatsheets</TabsTrigger>
             </TabsList>
           </Tabs>
 

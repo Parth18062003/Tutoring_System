@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { SavedContentViewer } from '@/components/learning/saved-content-viewer';
 import { SavedFlashcardViewer } from '@/components/learning/saved-flashcard-viewer';
 import ReturnButtons from '@/components/return-buttons';
+import { SavedCheatsheetViewer } from '@/components/learning/saved-cheatsheet-viewer';
 
 export default function SavedContentDetailPage() {
   const params = useParams();
@@ -80,13 +81,27 @@ export default function SavedContentDetailPage() {
       return <SavedFlashcardViewer content={content} />;
     }
     
+    if (content.contentType === "cheatsheet") {
+      return <SavedCheatsheetViewer content={content} />;
+    }
+
     // Check if content has flashcard sections
     const hasFlashcardSections = content.sections?.some(
       (section: any) => section.sectionType === "flashcard"
     );
     
+    const hasCheatsheetSections = content.sections?.some(
+      (section: any) => section.sectionType?.startsWith("cheatsheet_") ||
+        section.sectionType === "key_concepts" ||
+        section.sectionType === "formulas_rules"
+    );
+
     if (hasFlashcardSections) {
       return <SavedFlashcardViewer content={content} />;
+    }
+    
+    if (hasCheatsheetSections) {
+      return <SavedCheatsheetViewer content={content} />;
     }
     
     // Default to regular content viewer for lessons, practice, etc.
