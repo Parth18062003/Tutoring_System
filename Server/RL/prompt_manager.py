@@ -180,6 +180,116 @@ class PromptManager:
             }
         ))
 
+        # Flashcard template
+        self.register_template(PromptTemplate(
+            template_id="content_generation_flashcards",
+            category=PromptCategory.CONTENT_GENERATION,
+            description="Template for generating flashcard content",
+            template="""*   **JSON `sections` for 'flashcards'**: Array MUST contain at least 5-8 objects (based on {length_desc}) with `sectionType`: `flashcard`.
+            *   Each flashcard object MUST have:
+                *   `title`: Brief title for the card concept
+                *   `contentMarkdown`: Empty string (not used for flashcards)
+                *   `frontSide`: Main concept/question text on front of card
+                *   `backSide`: Detailed explanation/answer for back of card
+                *   `difficulty`: Difficulty level of this individual card (easy/medium/challenging) based on overall {difficulty_desc}
+                *   `hint`: (Optional) A helpful hint for the card
+            *   Cards MUST follow {scaffolding_level} approach: {scaffolding_desc}
+            *   Create a progressive sequence of cards that build on each other to enhance retention
+            *   First card MUST introduce the overall topic
+            *   Last card should integrate/synthesize multiple concepts""",
+            parameters={
+                "length_desc": "Content length description",
+                "difficulty_desc": "Difficulty level description",
+                "scaffolding_level": "Level of scaffolding",
+                "scaffolding_desc": "Description of scaffolding approach",
+                "learning_style": "Student's preferred learning style",
+            }
+        ))
+
+        # Cheatsheet template
+        self.register_template(PromptTemplate(
+            template_id="content_generation_cheatsheet",
+            category=PromptCategory.CONTENT_GENERATION,
+            description="Template for generating cheatsheet content",
+            template="""*   **JSON `sections` for 'cheatsheet'**: Array MUST contain objects with `sectionType` IN ORDER: `cheatsheet_introduction`, `key_concepts`, `formulas_rules`, `examples_applications`, `quick_reference`.
+            *   Section 1 (`cheatsheet_introduction`): Populate `contentMarkdown` with a concise topic overview. Set `title` to "Overview".
+            *   Section 2 (`key_concepts`): Populate `contentMarkdown` with essential definitions and concepts using bullet points and{scaffolding_level}-level explanations ({scaffolding_desc}). Length: {length_desc}. Set `title` to "Key Concepts".
+            *   Section 3 (`formulas_rules`): Populate `contentMarkdown` with important formulas, rules, or procedures. Set `title` to "Formulas & Rules".
+            *   Section 4 (`examples_applications`): Populate `contentMarkdown` with brief {difficulty_desc} example applications. Set `title` to "Examples".
+            *   Section 5 (`quick_reference`): Populate `contentMarkdown` with a rapid reference section - extremely concise recall points. Set `title` to "Quick Reference".
+            *   The entire cheatsheet MUST use {strategy_name} approach where appropriate, with all content at {difficulty_desc} difficulty level.""",
+            parameters={
+                "length_desc": "Content length description",
+                "strategy_name": "Teaching strategy name",
+                "scaffolding_level": "Level of scaffolding",
+                "scaffolding_desc": "Description of scaffolding approach",
+                "learning_style": "Student's preferred learning style",
+                "difficulty_desc": "Difficulty level description"
+            }
+        ))
+
+        # Mind Map template
+        self.register_template(PromptTemplate(
+            template_id="content_generation_mindmap",
+            category=PromptCategory.CONTENT_GENERATION,
+            description="Template for generating mind map content",
+            template="""*   **JSON `sections` for 'mindmap'**: Array MUST contain objects with `sectionType` IN ORDER: `mindmap_overview`, `central_concept`, `primary_branches`, `connections`, `study_suggestions`.
+            *   Section 1 (`mindmap_overview`): Populate `contentMarkdown` with brief explanation of how to use this mind map. Set `title` to "Mind Map Overview".
+            *   Section 2 (`central_concept`): Populate `contentMarkdown` with core concept definition and importance. Set `title` to "Central Concept".
+            *   Section 3 (`primary_branches`): Populate `contentMarkdown` with markdown representation of primary branches (main subtopics), each with bullet hierarchies showing relationships. Implement {difficulty_desc} level content with {scaffolding_level} scaffolding. Length: {length_desc}. Set `title` to "Main Branches".
+            *   Section 4 (`connections`): Populate `contentMarkdown` with cross-connections between different branches showing relationships. Set `title` to "Concept Connections".
+            *   Section 5 (`study_suggestions`): Populate `contentMarkdown` with suggestions for using this mind map for effective {learning_style}-focused study. Set `title` to "Study Suggestions".
+            *   Format markdown to convey hierarchical relationships through indentation and symbols (-, *, >)""",
+            parameters={
+                "length_desc": "Content length description",
+                "difficulty_desc": "Difficulty level description",
+                "scaffolding_level": "Level of scaffolding",
+                "learning_style": "Student's preferred learning style"
+            }
+        ))
+
+        # Study Guide template
+        self.register_template(PromptTemplate(
+            template_id="content_generation_studyguide",
+            category=PromptCategory.CONTENT_GENERATION,
+            description="Template for generating study guide content",
+            template="""*   **JSON `sections` for 'studyguide'**: Array MUST contain objects with `sectionType` IN ORDER: `learning_objectives`, `key_vocabulary`, `concept_explanations`, `common_misconceptions`, `practice_questions`, `study_strategies`.
+            *   Section 1 (`learning_objectives`): Populate `contentMarkdown` with 3-5 specific learning objectives. Set `title` to "Learning Objectives".
+            *   Section 2 (`key_vocabulary`): Populate `contentMarkdown` with essential terms and definitions, formatted as term-definition pairs. Set `title` to "Key Vocabulary".
+            *   Section 3 (`concept_explanations`): Populate `contentMarkdown` with {difficulty_desc} explanations using {strategy_name} approach. Length: {length_desc}. Set `title` to "Concept Explanations".
+            *   Section 4 (`common_misconceptions`): Populate `contentMarkdown` with common errors and misunderstandings about the topic. Set `title` to "Misconceptions".
+            *   Section 5 (`practice_questions`): Populate `contentMarkdown` with 3-5 practice questions and answers at {difficulty_desc} level. Set `title` to "Practice Questions".
+            *   Section 6 (`study_strategies`): Populate `contentMarkdown` with specific strategies optimized for {learning_style} learners with {scaffolding_level} support. Set `title` to "Study Strategies".""",
+            parameters={
+                "length_desc": "Content length description",
+                "difficulty_desc": "Difficulty level description",
+                "strategy_name": "Teaching strategy name",
+                "learning_style": "Student's preferred learning style",
+                "scaffolding_level": "Level of scaffolding"
+            }
+        ))
+
+        # Interactive Scenario template
+        self.register_template(PromptTemplate(
+            template_id="content_generation_scenario",
+            category=PromptCategory.CONTENT_GENERATION,
+            description="Template for generating interactive scenario content",
+            template="""*   **JSON `sections` for 'scenario'**: Array MUST contain objects with `sectionType` IN ORDER: `scenario_introduction`, `scenario_context`, `challenge_points`, `guided_exploration`, `reflection_questions`.
+            *   Section 1 (`scenario_introduction`): Populate `contentMarkdown` with engaging introduction to the real-world scenario. Set `title` to "The Scenario".
+            *   Section 2 (`scenario_context`): Populate `contentMarkdown` with detailed background information and initial situation. Set `title` to "Context".
+            *   Section 3 (`challenge_points`): Populate `contentMarkdown` with decision points or challenges within the scenario at {difficulty_desc} difficulty. Set `title` to "Challenges".
+            *   Section 4 (`guided_exploration`): Populate `contentMarkdown` with {scaffolding_level} guided steps to work through the scenario applying topic concepts.Length: {length_desc}. Set `title` to "Exploration".
+            *   Section 5 (`reflection_questions`): MUST contain `questions` (Array of strings: 3-5 thought-provoking questions) AND `concepts` (Array of strings: key concepts applied). Populate `contentMarkdown` with brief context. Set `title` to "Reflection Questions".
+            *   The scenario MUST use {strategy_name} teaching approach, be relevant to grade level, and demonstrate practical application of topic.""",
+            parameters={
+                "length_desc": "Content length description",
+                "difficulty_desc": "Difficulty level description",
+                "scaffolding_level": "Level of scaffolding",
+                "learning_style": "Student's preferred learning style",
+                "strategy_name": "Teaching strategy name"
+            }
+        ))
+
     def _register_assessment_templates(self):
         """Register assessment prompt templates"""
         self.register_template(PromptTemplate(

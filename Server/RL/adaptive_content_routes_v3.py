@@ -12,7 +12,8 @@ import re
 import copy
 from contextlib import asynccontextmanager
 import time
-from fastapi import FastAPI, HTTPException, Depends, Header, status, Request
+from fastapi import FastAPI, HTTPException, Depends, Header, status, Request, Query
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import StreamingResponse
 from pydantic import BaseModel, Field, ConfigDict
@@ -32,7 +33,10 @@ import io
 from prompt_manager import PromptManager
 from response_validator import ResponseValidator
 from asyncio import Lock
+import seaborn as sns
 import random
+import collections
+from pymongo.errors import OperationFailure
 
 try:
     from ncert_tutor import (
@@ -134,7 +138,7 @@ TOGETHER_MODEL = os.environ.get(
 OPEN_ROUTER_API_KEY = os.environ.get(
     "OPEN_ROUTER_API_KEY")
 OPEN_ROUTER_MODEL = os.environ.get(
-    "OPEN_ROUTER_MODEL", "deepseek/deepseek-v3-base:free")
+    "OPEN_ROUTER_MODEL", "google/gemini-2.0-flash-exp:free")
 logger = logging.getLogger("assessment_engine")
 logger = logging.getLogger("learning_analytics")
 together_client: Optional[TogetherAIClient] = None
@@ -524,7 +528,7 @@ class ExerciseGenerator:
                 prompt=prompt,
                 # model=os.environ.get("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
                 model=os.environ.get("OPEN_ROUTER_MODEL",
-                                     "deepseek/deepseek-v3-base:free"),
+                                     "google/gemini-2.0-flash-exp:free"),
                 temperature=0.7,
                 max_tokens=4000,  # Increased token limit for multiple questions
                 system_prompt=system_prompt
@@ -1294,7 +1298,7 @@ class AssessmentEngine:
                 prompt=prompt,
                 # model=os.environ.get("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
                 model=os.environ.get("OPEN_ROUTER_MODEL",
-                                     "deepseek/deepseek-v3-base:free"),
+                                     "google/gemini-2.0-flash-exp:free"),
                 temperature=0.2,
                 max_tokens=1000,
                 system_prompt=system_prompt
@@ -1448,6 +1452,20 @@ class AssessmentEngine:
         }
 
 
+class PaginatedResponse(BaseModel):
+    page: int
+    limit: int
+    total: int
+    items: List[Dict[str, Any]]
+
+
+class HeatmapResponse(BaseModel):
+    subjects: List[str]
+    topic_labels: List[List[str]]
+    heatmap_data: List[List[Optional[float]]]  # Allow None for NaN
+    image_base64: Optional[str] = None
+
+
 class LearningAnalytics:
     """Advanced learning analytics for educational insights"""
 
@@ -1456,39 +1474,28 @@ class LearningAnalytics:
         self.neo4j_driver = neo4j_driver
 
     async def get_student_analytics(self, student_id: str) -> Dict[str, Any]:
-        """Get comprehensive analytics for a student"""
         session = await self._get_student_session(student_id)
         if not session:
-            return {"error": "Student session not found"}
+            return {"error": "Student session not found", "student_id": student_id}
 
         mastery_stats = self._calculate_mastery_statistics(session)
-
         topic_velocities = self._calculate_learning_velocity(session)
-
         strategy_effectiveness = await self._calculate_strategy_effectiveness(session)
-
-        knowledge_map = await self._identify_knowledge_structure(session)
-
+        knowledge_structure = await self._identify_knowledge_structure(session)
         trajectory_analysis = self._analyze_learning_trajectory(session)
-
-        learning_path = self._generate_learning_path(session)
-
         stagnation_areas = self._detect_stagnation_areas(session)
-
         time_analytics = await self._analyze_time_patterns(session)
 
         return {
             "student_id": student_id,
-            "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
+            "calculated_at": datetime.now(timezone.utc).isoformat(),
             "mastery_summary": mastery_stats,
             "learning_velocity": topic_velocities,
             "strategy_effectiveness": strategy_effectiveness,
-            "knowledge_structure": knowledge_map,
+            "knowledge_structure": knowledge_structure,
             "learning_trajectory": trajectory_analysis,
-            "learning_path": learning_path,
             "stagnation_areas": stagnation_areas,
-            "time_analytics": time_analytics,
-            "affective_state": session.get("affective_state", {})
+            "time_patterns": time_analytics,
         }
 
     async def get_class_analytics(self, class_id: str, student_ids: List[str] = None) -> Dict[str, Any]:
@@ -1514,77 +1521,80 @@ class LearningAnalytics:
             "student_analytics": student_analytics
         }
 
-    async def generate_mastery_heatmap(self, student_id: str) -> Dict[str, Any]:
-        """Generate a heatmap visualization of student mastery across topics"""
+    async def generate_mastery_heatmap(self, student_id: str) -> HeatmapResponse:
         session = await self._get_student_session(student_id)
-        if not session:
-            return {"error": "Student session not found"}
+        if not session or 'state' not in session or 'mastery' not in session['state']:
+            logger.warning(
+                f"No session or mastery data found for heatmap generation for student {student_id}")
+            return HeatmapResponse(subjects=[], topic_labels=[], heatmap_data=[])
 
-        mastery_data = session.get("state", {}).get("mastery", {})
+        mastery_data = session["state"]["mastery"]
         if not mastery_data:
-            return {"error": "No mastery data available"}
+            return HeatmapResponse(subjects=[], topic_labels=[], heatmap_data=[])
 
         topics_by_subject = defaultdict(list)
-
         for topic, mastery in mastery_data.items():
             parts = topic.split('-', 1)
             subject = parts[0] if len(parts) > 1 else "General"
-            topics_by_subject[subject].append((topic, mastery))
+            topics_by_subject[subject].append(
+                {"topic": topic, "mastery": mastery})
 
-        visualization_data = {
-            "student_id": student_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "subject_areas": [
-                {
-                    "subject": subject,
-                    "topics": [
-                        {"topic": topic, "mastery": mastery}
-                        for topic, mastery in sorted(topics, key=lambda x: x[1], reverse=True)
-                    ]
-                }
-                for subject, topics in topics_by_subject.items()
-            ]
-        }
+        subjects = sorted(list(topics_by_subject.keys()))
+        max_topics_per_subject = max(
+            len(topics) for topics in topics_by_subject.values()) if topics_by_subject else 0
+        if max_topics_per_subject == 0:
+            return HeatmapResponse(subjects=subjects, topic_labels=[], heatmap_data=[])
 
+        heatmap_data = np.full((len(subjects), max_topics_per_subject), np.nan)
+        topic_labels = [
+            [""] * max_topics_per_subject for _ in range(len(subjects))]
+
+        for i, subject in enumerate(subjects):
+            topics = sorted(
+                topics_by_subject[subject], key=lambda x: x['topic'])
+            for j, topic_data in enumerate(topics):
+                if j < max_topics_per_subject:
+                    heatmap_data[i, j] = topic_data['mastery']
+                    topic_name_part = topic_data['topic'].split('-', 1)[-1]
+                    topic_labels[i][j] = topic_name_part.replace(
+                        '_', ' ').title()  # Use displayable name
+
+        heatmap_data_list = [[(val if not np.isnan(val) else None)
+                              for val in row] for row in heatmap_data]
+
+        image_base64 = None
         try:
-            plt.figure(figsize=(12, 8))
+            if len(subjects) > 0 and max_topics_per_subject > 0:
+                fig_height = max(4, len(subjects) * 0.5)
+                fig_width = max(6, max_topics_per_subject * 0.7)
+                fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+                sns.heatmap(heatmap_data, annot=False, cmap="viridis",  # Disable annotation for clarity if many topics
+                            xticklabels=False, yticklabels=subjects, ax=ax,
+                            cbar_kws={'label': 'Mastery Level'}, vmin=0, vmax=1,
+                            linecolor='grey', linewidths=0.1)
+                ax.set_title(f'Topic Mastery Heatmap')
+                ax.set_xlabel('Topics (Grouped by Subject)')
+                ax.set_ylabel('Subjects')
+                plt.xticks(rotation=90)
+                plt.yticks(rotation=0)
+                plt.tight_layout()
 
-            subjects = list(topics_by_subject.keys())
-            max_topics = max(len(topics)
-                             for topics in topics_by_subject.values())
+                buf = io.BytesIO()
+                # Lower DPI for smaller size
+                plt.savefig(buf, format='png', dpi=90)
+                plt.close(fig)
+                buf.seek(0)
+                image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        except Exception as img_err:
+            logger.error(
+                f"Failed to generate heatmap image: {img_err}", exc_info=True)
 
-            heatmap_data = np.zeros((len(subjects), max_topics))
-            topic_labels = [[""] * max_topics for _ in range(len(subjects))]
-
-            for i, subject in enumerate(subjects):
-                topics = topics_by_subject[subject]
-                for j, (topic, mastery) in enumerate(topics):
-                    if j < max_topics:
-                        heatmap_data[i, j] = mastery
-                        topic_labels[i][j] = topic.split(
-                            '-')[-1].replace('_', ' ')
-
-            plt.imshow(heatmap_data, cmap='RdYlGn',
-                       aspect='auto', vmin=0, vmax=1)
-            plt.colorbar(label='Mastery Level')
-
-            plt.yticks(range(len(subjects)), subjects)
-            plt.title(f'Mastery Heatmap for Student {student_id}')
-            plt.tight_layout()
-
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png', dpi=100)
-            buf.seek(0)
-            img_data = base64.b64encode(buf.read()).decode('utf-8')
-            plt.close()
-
-            visualization_data["heatmap_image"] = f"data:image/png;base64,{img_data}"
-
-        except Exception as e:
-            logger.error(f"Error generating heatmap: {e}", exc_info=True)
-            visualization_data["error"] = "Could not generate heatmap visualization"
-
-        return visualization_data
+        return HeatmapResponse(
+            subjects=subjects,
+            topic_labels=topic_labels,
+            heatmap_data=heatmap_data_list,
+            image_base64=image_base64
+        )
 
     async def get_prerequisite_chain(self, topic: str) -> Dict[str, Any]:
         """Get prerequisite chains for a topic from the knowledge graph"""
@@ -1715,15 +1725,13 @@ class LearningAnalytics:
     async def _calculate_strategy_effectiveness(self, session: Dict) -> Dict[str, Any]:
         """Calculate the effectiveness of different teaching strategies"""
         learning_path = session.get("learning_path", [])
+        if not learning_path:
+            return {"most_effective_strategy": None, "least_effective_strategy": None, "per_strategy_details": {}}
 
         strategy_interactions = defaultdict(list)
-
         for interaction in learning_path:
             strategy = interaction.get("strategy")
-            if not strategy:
-                continue
-
-            if "mastery_after_feedback" in interaction and "mastery_at_request" in interaction:
+            if strategy:
                 strategy_interactions[strategy].append(interaction)
 
         effectiveness = {}
@@ -1731,117 +1739,174 @@ class LearningAnalytics:
             if not interactions:
                 continue
 
-            gains = [i.get("mastery_after_feedback", 0) - i.get("mastery_at_request", 0)
-                     for i in interactions]
+            # Calculate average mastery gain
+            gains = [
+                i.get("mastery_after_feedback", i.get(
+                    "mastery_at_request", 0)) - i.get("mastery_at_request", 0)
+                for i in interactions if i.get("mastery_after_feedback") is not None and i.get("mastery_at_request") is not None
+            ]
             avg_gain = sum(gains) / len(gains) if gains else 0
 
-            ratings = [i.get("helpful_rating", 0)
-                       for i in interactions if "helpful_rating" in i]
-            avg_rating = sum(ratings) / len(ratings) if ratings else None
+            # --- Robustly calculate average helpful rating --- START FIX ---
+            valid_helpful_ratings = []
+            for i in interactions:
+                rating = i.get("helpful_rating")
+                if rating is not None:
+                    try:
+                        # Try converting to int to handle potential string numbers or floats
+                        valid_helpful_ratings.append(int(rating))
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            f"Invalid non-numeric helpful_rating '{rating}' found in interaction {i.get('interaction_id')}. Skipping.")
+                        continue  # Skip this invalid rating
 
-            completion_percentages = [i.get("completion_percentage", 0)
-                                      for i in interactions if "completion_percentage" in i]
+            avg_helpful_rating = sum(
+                valid_helpful_ratings) / len(valid_helpful_ratings) if valid_helpful_ratings else None
+            # --- END FIX ---
+
+            # --- Robustly calculate average engagement rating (Apply similar fix) --- START FIX ---
+            valid_engagement_ratings = []
+            for i in interactions:
+                rating = i.get("engagement_rating")
+                if rating is not None:
+                    try:
+                        valid_engagement_ratings.append(int(rating))
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            f"Invalid non-numeric engagement_rating '{rating}' found in interaction {i.get('interaction_id')}. Skipping.")
+                        continue  # Skip this invalid rating
+
+            avg_engagement_rating = sum(valid_engagement_ratings) / len(
+                valid_engagement_ratings) if valid_engagement_ratings else None
+            # --- END FIX ---
+
+            # Calculate average completion percentage
+            completion_percentages = [
+                i.get("completion_percentage", 0) for i in interactions
+                if i.get("completion_percentage") is not None
+            ]
             avg_completion = sum(completion_percentages) / \
                 len(completion_percentages) if completion_percentages else None
 
             effectiveness[strategy] = {
-                "count": len(interactions),
+                "usage_count": len(interactions),
                 "avg_mastery_gain": avg_gain,
-                "avg_rating": avg_rating,
-                "avg_completion": avg_completion,
-                "topics_used": list(set(i.get("topic", "") for i in interactions))
+                "avg_helpful_rating": avg_helpful_rating,
+                "avg_engagement_rating": avg_engagement_rating,
+                "avg_completion_percentage": avg_completion,
             }
 
-        if effectiveness:
-            most_effective = max(effectiveness.items(),
-                                 key=lambda x: x[1]["avg_mastery_gain"])
-            most_effective_strategy = most_effective[0]
-        else:
-            most_effective_strategy = None
+        # Determine most/least effective based on avg_mastery_gain
+        sorted_effectiveness = sorted(effectiveness.items(
+        ), key=lambda item: item[1]['avg_mastery_gain'], reverse=True)
+
+        most_effective = sorted_effectiveness[0] if sorted_effectiveness else None
+        least_effective = sorted_effectiveness[-1] if sorted_effectiveness else None
+
+        most_effective_strategy = {
+            "strategy": most_effective[0],
+            "avg_gain": most_effective[1]['avg_mastery_gain'],
+            # Example metric
+            "avg_rating": most_effective[1].get('avg_helpful_rating')
+        } if most_effective else None
+
+        least_effective_strategy = {
+            "strategy": least_effective[0],
+            "avg_gain": least_effective[1]['avg_mastery_gain'],
+            "avg_rating": least_effective[1].get('avg_helpful_rating')
+        } if least_effective else None
 
         return {
-            "by_strategy": effectiveness,
-            "most_effective": most_effective_strategy,
-            "recommendation": f"Consider using {most_effective_strategy} more frequently" if most_effective_strategy else "Need more data to recommend strategies"
+            "most_effective_strategies": [most_effective_strategy] if most_effective_strategy else [],
+            "least_effective_strategies": [least_effective_strategy] if least_effective_strategy else [],
+            "per_strategy_details": effectiveness,
         }
 
     async def _identify_knowledge_structure(self, session: Dict) -> Dict[str, Any]:
-        """Identify knowledge structure, clusters, and gaps"""
-        mastery_dict = session.get("state", {}).get("mastery", {})
+        if not self.neo4j_driver:
+            logger.warning(
+                "Neo4j driver not available, skipping knowledge structure analysis.")
+            return {"identified_clusters": [], "potential_knowledge_gaps": [], "identified_strengths": []}
 
-        if not mastery_dict:
-            return {}
+        try:
+            state = session.get("state", {})
+            mastery_dict = state.get("mastery", {})
+            if not mastery_dict:
+                return {"identified_clusters": [], "potential_knowledge_gaps": [], "identified_strengths": []}
 
-        knowledge_structure = {}
-        if self.neo4j_driver:
-            try:
-                topics = list(mastery_dict.keys())
+            topics = list(mastery_dict.keys())
+            if not topics:
+                return {"identified_clusters": [], "potential_knowledge_gaps": [], "identified_strengths": []}
 
-                with self.neo4j_driver.session() as neo4j_session:
-                    result = neo4j_session.run("""
-                    UNWIND $topics AS topic
-                    MATCH (c:Concept {name: topic})
-                    MATCH (c)-[r:RELATED_TO|PART_OF|IS_A|CAUSES]-(related:Concept)
-                    WHERE related.name IN $topics
-                    WITH c, collect(related.name) AS related_concepts
-                    RETURN c.name AS topic, related_concepts, size(related_concepts) AS connection_count
-                    ORDER BY connection_count DESC
-                    """, topics=topics)
+            with self.neo4j_driver.session(database=NEO4J_DATABASE) as neo4j_session:
+                result = neo4j_session.run("""
+                     UNWIND $topics AS topic
+                     MATCH (c:Concept {name: topic})
+                     MATCH (c)-[r:PART_OF|RELATED_TO|MENTIONS]-(related:Concept)
+                     WHERE related.name IN $topics AND c <> related
+                     WITH c, collect(DISTINCT related.name) AS related_concepts
+                     RETURN c.name AS topic, related_concepts, size(related_concepts) AS connection_count
+                     ORDER BY connection_count DESC
+                     """, topics=topics)
+                clusters_raw = [dict(record) for record in result]
 
-                    clusters = [{"topic": record["topic"],
-                                "related": record["related_concepts"],
-                                 "connection_count": record["connection_count"]}
-                                for record in result]
+            adj_list = {item['topic']: set(
+                item['related_concepts']) for item in clusters_raw}
+            all_relevant_topics = set(adj_list.keys()) | set(
+                concept for concepts in adj_list.values() for concept in concepts)
+            processed_topics = set()
+            all_clusters_data = []
+            cluster_id_counter = 0
 
-                    topic_to_cluster = {}
-                    all_clusters = []
+            for topic in all_relevant_topics:
+                if topic not in processed_topics:
+                    current_cluster = set()
+                    queue = collections.deque([topic])
+                    processed_topics.add(topic)
+                    current_cluster.add(topic)
+                    while queue:
+                        current_node = queue.popleft()
+                        neighbors = adj_list.get(current_node, set())
+                        for neighbor in neighbors:
+                            if neighbor in all_relevant_topics and neighbor not in processed_topics:
+                                processed_topics.add(neighbor)
+                                current_cluster.add(neighbor)
+                                queue.append(neighbor)
+                        for node, related_nodes in adj_list.items():
+                            if current_node in related_nodes and node in all_relevant_topics and node not in processed_topics:
+                                processed_topics.add(node)
+                                current_cluster.add(node)
+                                queue.append(node)
 
-                    for i, cluster in enumerate(clusters):
-                        center_topic = cluster["topic"]
-                        related = set(cluster["related"])
-                        related.add(center_topic)
+                    if len(current_cluster) > 1:
+                        cluster_id = f"cluster_{cluster_id_counter}"
+                        cluster_id_counter += 1
+                        cluster_masteries = {t: mastery_dict.get(
+                            t, 0.0) for t in current_cluster}
+                        avg_mastery = sum(cluster_masteries.values(
+                        )) / len(cluster_masteries) if cluster_masteries else 0
+                        all_clusters_data.append({
+                            "cluster_id": cluster_id,
+                            # Sort topics within cluster
+                            "topics": sorted(list(current_cluster)),
+                            "avg_mastery": avg_mastery
+                        })
 
-                        overlapping_clusters = []
-                        for j, existing_cluster in enumerate(all_clusters):
-                            if related & existing_cluster:
-                                overlapping_clusters.append(j)
+            gaps = sorted(
+                [topic for topic, mastery in mastery_dict.items() if mastery < 0.5])
+            strengths = sorted(
+                [topic for topic, mastery in mastery_dict.items() if mastery >= 0.7])
 
-                        if overlapping_clusters:
-                            new_cluster = related
-                            for j in sorted(overlapping_clusters, reverse=True):
-                                new_cluster |= all_clusters[j]
-                                all_clusters.pop(j)
-                            all_clusters.append(new_cluster)
-                        else:
-
-                            all_clusters.append(related)
-
-                    cluster_masteries = []
-                    for i, cluster in enumerate(all_clusters):
-                        cluster_topics = list(cluster)
-                        cluster_mastery = {
-                            "id": i,
-                            "topics": cluster_topics,
-                            "average_mastery": sum(mastery_dict.get(t, 0) for t in cluster_topics) / len(cluster_topics) if cluster_topics else 0,
-                            "size": len(cluster_topics)
-                        }
-                        cluster_masteries.append(cluster_mastery)
-
-                    knowledge_structure["clusters"] = cluster_masteries
-
-            except Exception as e:
-                logger.error(
-                    f"Error analyzing knowledge structure: {e}", exc_info=True)
-
-        gaps = [topic for topic, mastery in mastery_dict.items()
-                if mastery < 0.4]
-        strengths = [topic for topic,
-                     mastery in mastery_dict.items() if mastery > 0.8]
-
-        knowledge_structure["gaps"] = gaps
-        knowledge_structure["strengths"] = strengths
-
-        return knowledge_structure
+            return {
+                # Sort clusters
+                "identified_clusters": sorted(all_clusters_data, key=lambda x: x['avg_mastery']),
+                "potential_knowledge_gaps": gaps,
+                "identified_strengths": strengths
+            }
+        except Exception as e:
+            logger.error(
+                f"Error identifying knowledge structure: {e}", exc_info=True)
+            return {"identified_clusters": [], "potential_knowledge_gaps": [], "identified_strengths": []}
 
     def _analyze_learning_trajectory(self, session: Dict) -> Dict[str, Any]:
         """Analyze the learning trajectory over time"""
@@ -2946,8 +3011,12 @@ async def get_next_content_stream(
             student_state, student_profile, unwrapped_env)
         if observation is not None:
             try:
-                action, _ = rl_system.model.predict(
-                    observation, deterministic=True)
+                if random.random() < 0.3:  # 30% exploration rate
+                    action, _ = rl_system.model.predict(
+                        observation, deterministic=False)
+                else:
+                    action, _ = rl_system.model.predict(
+                        observation, deterministic=True)
                 action = action.astype(int)
                 strategy = TeachingStrategies(action[0])
                 topic_idx = action[1]
@@ -3164,6 +3233,7 @@ async def get_next_content_stream(
             difficulty_desc=difficulty_choice.name.lower(),
             feedback_instr=feedback_instr
         )
+
     else:
         content_specific_instructions = f"Generate {request.content_type} content about {final_topic_name}"
 
@@ -4056,21 +4126,28 @@ async def get_system_metrics():
 
     # Content generation metrics
     try:
+        # Ensure feedback_details exists before accessing nested fields
         content_pipeline = await learning_db["learning_states"].aggregate([
             {"$unwind": "$learning_path"},
-            {"$match": {"learning_path.content_type": {"$exists": True}}},
+            {"$match": {
+                "learning_path.content_type": {"$exists": True}
+                # Add filter for existing feedback if needed for ratings/completion
+                # "learning_path.feedback_details": {"$exists": True, "$ne": None}
+            }},
             {"$group": {
                 "_id": "$learning_path.content_type",
                 "count": {"$sum": 1},
-                "avg_helpful_rating": {"$avg": "$learning_path.helpful_rating"},
-                "avg_completion": {"$avg": "$learning_path.completion_percentage"}
+                # Use $ifNull to handle potentially missing feedback details
+                "avg_helpful_rating": {"$avg": {"$ifNull": ["$learning_path.feedback_details.helpful_rating", None]}},
+                "avg_completion": {"$avg": {"$ifNull": ["$learning_path.feedback_details.completion_percentage", None]}}
             }}
         ]).to_list(length=100)
 
         metrics["content_types"] = {item["_id"]: {
             "count": item["count"],
-            "avg_helpful_rating": item.get("avg_helpful_rating"),
-            "avg_completion": item.get("avg_completion")
+            # Only include avg if calculation was possible (non-null results)
+            **({"avg_helpful_rating": item["avg_helpful_rating"]} if item.get("avg_helpful_rating") is not None else {}),
+            **({"avg_completion": item["avg_completion"]} if item.get("avg_completion") is not None else {})
         } for item in content_pipeline}
     except Exception as e:
         logger.error(f"Error getting content metrics: {e}", exc_info=True)
@@ -4078,9 +4155,15 @@ async def get_system_metrics():
 
     # Strategy effectiveness metrics
     try:
+        # Ensure necessary fields for subtraction exist
         strategy_pipeline = await learning_db["learning_states"].aggregate([
             {"$unwind": "$learning_path"},
-            {"$match": {"learning_path.strategy": {"$exists": True}}},
+            {"$match": {
+                "learning_path.strategy": {"$exists": True},
+                # Ensure both mastery fields are present and numeric for subtraction
+                "learning_path.mastery_after_feedback": {"$exists": True, "$type": "number"},
+                "learning_path.mastery_at_request": {"$exists": True, "$type": "number"}
+            }},
             {"$group": {
                 "_id": "$learning_path.strategy",
                 "count": {"$sum": 1},
@@ -4092,6 +4175,7 @@ async def get_system_metrics():
 
         metrics["strategies"] = {item["_id"]: {
             "count": item["count"],
+            # Already handles potential null if group is empty
             "avg_mastery_gain": item.get("avg_mastery_gain")
         } for item in strategy_pipeline}
     except Exception as e:
@@ -4100,12 +4184,22 @@ async def get_system_metrics():
 
     # Assessment statistics
     try:
+        # Ensure score, mastery_after, mastery_before are numbers
         assessment_stats = await learning_db["assessments"].aggregate([
-            {"$match": {"completed": True}},
+            {"$match": {
+                "completed": True,
+                # Check score exists and is number
+                "overall_score": {"$exists": True, "$type": "number"},
+                # Check mastery exists and is number
+                "mastery_after": {"$exists": True, "$type": "number"},
+                # Check mastery exists and is number
+                "mastery_before": {"$exists": True, "$type": "number"}
+            }},
             {"$group": {
                 "_id": None,
                 "count": {"$sum": 1},
-                "avg_score": {"$avg": "$score"},
+                # Use correct field name
+                "avg_score": {"$avg": "$overall_score"},
                 "avg_mastery_gain": {"$avg": {
                     "$subtract": ["$mastery_after", "$mastery_before"]
                 }}
@@ -4113,13 +4207,18 @@ async def get_system_metrics():
         ]).to_list(length=1)
 
         if assessment_stats:
+            # Check if keys exist before accessing
+            stats = assessment_stats[0]
             metrics["assessments"] = {
-                "total_completed": assessment_stats[0]["count"],
-                "avg_score": assessment_stats[0]["avg_score"],
-                "avg_mastery_gain": assessment_stats[0]["avg_mastery_gain"]
+                "total_completed": stats.get("count", 0),
+                # Will be None if no matching docs
+                "avg_score": stats.get("avg_score"),
+                # Will be None if no matching docs
+                "avg_mastery_gain": stats.get("avg_mastery_gain")
             }
         else:
-            metrics["assessments"] = {"total_completed": 0}
+            metrics["assessments"] = {
+                "total_completed": 0, "avg_score": None, "avg_mastery_gain": None}
     except Exception as e:
         logger.error(f"Error getting assessment metrics: {e}", exc_info=True)
         metrics["assessments"] = {"error": str(e)}
@@ -4129,187 +4228,281 @@ async def get_system_metrics():
         active_users = await learning_db["learning_states"].count_documents({
             "last_active": {"$gt": datetime.now(timezone.utc) - timedelta(days=7)}
         })
-
         total_users = await learning_db["learning_states"].count_documents({})
-
-        metrics["users"] = {
-            "total": total_users,
-            "active_last_7days": active_users
-        }
+        metrics["users"] = {"total": total_users,
+                            "active_last_7days": active_users}
     except Exception as e:
         logger.error(f"Error getting user metrics: {e}", exc_info=True)
         metrics["users"] = {"error": str(e)}
 
-    return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "metrics": metrics
-    }
+    return {"timestamp": datetime.now(timezone.utc).isoformat(), "metrics": metrics}
 
 
-@app.get("/metrics/student/{student_id}")
-async def get_student_metrics(
+@app.get("/metrics/student/{student_id}", response_model=Dict[str, Any])
+async def get_student_metrics_endpoint(
     student_id: str,
-    user_id: str = Depends(get_user_id_from_proxy)
+    user_id_dep: str = Depends(get_user_id_from_proxy)  # Standardized name
 ):
-    """Get detailed metrics for a specific student"""
-    # Only allow users to see their own metrics, or admin users
-    if user_id != student_id and user_id != "admin":
+    if user_id_dep != student_id:
+        is_admin = False  # Replace with actual admin check
+        if not is_admin:
+            raise HTTPException(
+                status_code=403, detail="Forbidden: Cannot access another user's metrics")
+
+    try:
+        logger.info(
+            f"Received request for metrics summary for student: {student_id}")
+        if learning_db is None:
+            logger.error("MongoDB connection (learning_db) is not available.")
+            raise HTTPException(
+                status_code=503, detail="Database service unavailable")
+
+        # Ensure neo4j_driver is passed if available, handle None inside Analytics class
+        analytics = LearningAnalytics(learning_db, neo4j_driver)
+        student_analytics_summary = await analytics.get_student_analytics(student_id)
+
+        if "error" in student_analytics_summary:
+            raise HTTPException(
+                status_code=404, detail=student_analytics_summary["error"])
+
+        logger.info(
+            f"Successfully generated metrics summary for student: {student_id}")
+        return student_analytics_summary
+
+    except HTTPException as he:
+        logger.warning(
+            f"HTTPException during metrics summary generation for {student_id}: {he.status_code} - {he.detail}")
+        raise he
+    except Exception as e:
+        logger.error(
+            f"CRITICAL: Unhandled error processing metrics summary for student {student_id}: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={
+            "message": "Internal server error while processing analytics summary.",
+            "detail": f"An unexpected error occurred: {type(e).__name__}"
+        })
+
+
+@app.get("/metrics/student/{student_id}/path", response_model=PaginatedResponse)
+async def get_student_learning_path(
+    student_id: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    user_id_dep: str = Depends(get_user_id_from_proxy)  # Standardized name
+):
+    if user_id_dep != student_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if learning_db is None:
         raise HTTPException(
-            status_code=403, detail="Not authorized to view these metrics")
+            status_code=503, detail="Database service unavailable")
+
+    try:
+        skip = (page - 1) * limit
+        pipeline = [
+            {"$match": {"student_id": student_id}},
+            {"$project": {
+                "_id": 0,
+                "total": {"$size": {"$ifNull": ["$learning_path", []]}},
+                "items": {"$slice": [{"$ifNull": ["$learning_path", []]}, skip, limit]}
+            }},
+            {"$project": {
+                "total": 1,
+                "items": {
+                    "$map": {
+                        "input": "$items", "as": "item", "in": {
+                            "interaction_id": "$$item.interaction_id",
+                            "timestamp_utc": "$$item.timestamp_utc",
+                            "topic": "$$item.topic",
+                            "strategy": "$$item.strategy",
+                            "content_type": "$$item.content_type",
+                            "mastery_at_request": "$$item.mastery_at_request",
+                            "mastery_after_feedback": "$$item.mastery_after_feedback",
+                            "feedback_details": {  # Project nested fields safely
+                                "assessment_score": {"$ifNull": ["$$item.feedback_details.assessment_score", None]},
+                                "completion_percentage": {"$ifNull": ["$$item.feedback_details.completion_percentage", None]},
+                                "helpful_rating": {"$ifNull": ["$$item.feedback_details.helpful_rating", None]},
+                                "engagement_rating": {"$ifNull": ["$$item.feedback_details.engagement_rating", None]},
+                                "time_spent_seconds": {"$ifNull": ["$$item.feedback_details.time_spent_seconds", None]}
+                            }
+                        }
+                    }
+                }
+            }}
+        ]
+        result_list = await learning_db["learning_states"].aggregate(pipeline).to_list(length=1)
+
+        if not result_list:
+            return PaginatedResponse(page=page, limit=limit, total=0, items=[])
+
+        result_data = result_list[0]
+        total_count = result_data.get("total", 0)
+        items = result_data.get("items", [])
+
+        return PaginatedResponse(page=page, limit=limit, total=total_count, items=items)
+    except Exception as e:
+        logger.error(
+            f"Error fetching learning path for {student_id} using aggregation: {e}", exc_info=True)
+        if isinstance(e, OperationFailure) and 'Path collision' in str(e):
+            raise HTTPException(
+                status_code=500, detail="DB query conflict processing learning path.")
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve learning path")
+
+
+@app.get("/metrics/student/{student_id}/assessments", response_model=PaginatedResponse)
+async def get_student_assessment_history(
+    student_id: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    # Use the corrected dependency name
+    user_id_dep: str = Depends(get_user_id_from_proxy)
+):
+    if user_id_dep != student_id:
+        # Add admin check if needed
+        is_admin = False  # Replace with actual check
+        if not is_admin:
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     if learning_db is None:
-        raise HTTPException(status_code=503, detail="DB unavailable")
+        raise HTTPException(
+            status_code=503, detail="Database service unavailable")
 
-    analytics = LearningAnalytics(learning_db, neo4j_driver)
+    try:
+        skip = (page - 1) * limit
+        # Filter for completed assessments
+        query = {"user_id": student_id, "completed": True}
 
-    # Get comprehensive student analytics
-    student_analytics = await analytics.get_student_analytics(student_id)
+        total_count = await learning_db["assessments"].count_documents(query)
 
-    # Generate mastery heatmap
-    mastery_heatmap = await analytics.generate_mastery_heatmap(student_id)
+        # --- Updated Projection ---
+        projection = {
+            "_id": 0,  # Exclude default Mongo ID
+            "assessment_id": 1,
+            "topic": 1,
+            "subject": 1,
+            "completed_at": 1,
+            # Project the score (ensure this is the correct field name in DB)
+            "score": 1,
+            "mastery_before": 1,
+            "mastery_after": 1,
+            "question_count": 1,
+            "difficulty": 1  # <<< ADDED difficulty field projection
+            # Add any other fields stored in the assessment document that you need
+        }
+        # --- End Updated Projection ---
 
-    # Get assessment history summary
-    assessment_query = {"user_id": student_id, "completed": True}
-    assessment_cursor = learning_db["assessments"].find(
-        assessment_query,
-        projection={"score": 1, "topic": 1, "completed_at": 1,
-                    "mastery_before": 1, "mastery_after": 1}
-    ).sort("completed_at", -1).limit(50)
+        cursor = learning_db["assessments"].find(query, projection)\
+            .sort("completed_at", -1).skip(skip).limit(limit)
 
-    assessment_history = await assessment_cursor.to_list(length=50)
-    for item in assessment_history:
-        item["_id"] = str(item["_id"])
+        history = await cursor.to_list(length=limit)
 
-    # Get learning paths and recently used strategies
-    session = await get_student_session_mongo(student_id)
-    recent_strategies = []
-    learning_path_sequence = []
+        # Optional: Log the actual data being returned for debugging
+        # logger.debug(f"Assessment history items returned for page {page}: {history}")
 
-    if session:
-        for entry in session.learning_path[-20:]:
-            if isinstance(entry, dict):
-                strategy = entry.get("strategy")
-                if strategy:
-                    recent_strategies.append({
-                        "strategy": strategy,
-                        "timestamp": entry.get("timestamp_utc"),
-                        "topic": entry.get("topic")
-                    })
+        return PaginatedResponse(page=page, limit=limit, total=total_count, items=history)
+    except Exception as e:
+        logger.error(
+            f"Error fetching assessment history for {student_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve assessment history")
 
-                learning_path_sequence.append({
-                    "topic": entry.get("topic"),
-                    "timestamp": entry.get("timestamp_utc"),
-                    "content_type": entry.get("content_type"),
-                    "mastery_gain": entry.get("mastery_gain")
-                })
 
-    # Calculate trend data for visualization
-    mastery_trends = {}
-    if session and session.learning_path:
-        for entry in session.learning_path:
-            if isinstance(entry, dict) and "topic" in entry and "mastery_after_feedback" in entry and "timestamp_utc" in entry:
-                topic = entry["topic"]
-                if topic not in mastery_trends:
-                    mastery_trends[topic] = []
+@app.get("/metrics/student/{student_id}/heatmap", response_model=HeatmapResponse)
+async def get_student_mastery_heatmap(
+    student_id: str,
+    user_id_dep: str = Depends(get_user_id_from_proxy)  # Standardized name
+):
+    if user_id_dep != student_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if learning_db is None:
+        raise HTTPException(
+            status_code=503, detail="Database service unavailable")
 
-                mastery_trends[topic].append({
-                    "timestamp": entry["timestamp_utc"],
-                    "mastery": entry["mastery_after_feedback"]
-                })
-
-    return {
-        "student_id": student_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "summary": student_analytics,
-        "mastery_heatmap": mastery_heatmap.get("heatmap_image"),
-        "assessment_history": assessment_history,
-        "recent_strategies": recent_strategies,
-        "learning_path": learning_path_sequence,
-        "mastery_trends": mastery_trends
-    }
+    try:
+        analytics = LearningAnalytics(learning_db, neo4j_driver)
+        heatmap_data = await analytics.generate_mastery_heatmap(student_id)
+        # generate_mastery_heatmap now returns HeatmapResponse directly
+        if not heatmap_data.subjects:
+            return HeatmapResponse(subjects=[], topic_labels=[], heatmap_data=[])
+        return heatmap_data
+    except Exception as e:
+        logger.error(
+            f"Error generating heatmap for {student_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to generate mastery heatmap")
 
 
 @app.get("/metrics/topics")
 async def get_topic_metrics():
-    """Get metrics on topics across all students"""
     if learning_db is None:
         raise HTTPException(status_code=503, detail="DB unavailable")
-
-    # Topic difficulty analysis
     try:
+        # Pipeline to aggregate topic stats from learning path
         topic_pipeline = await learning_db["learning_states"].aggregate([
             {"$unwind": "$learning_path"},
             {"$match": {
                 "learning_path.topic": {"$exists": True},
-                "learning_path.mastery_after_assessment": {"$exists": True},
-                "learning_path.mastery_at_request": {"$exists": True}
+                "learning_path.mastery_after_feedback": {"$exists": True, "$type": "number"},
+                "learning_path.mastery_at_request": {"$exists": True, "$type": "number"}
             }},
             {"$group": {
                 "_id": "$learning_path.topic",
                 "attempts": {"$sum": 1},
-                "avg_mastery": {"$avg": "$learning_path.mastery_after_assessment"},
-                "avg_mastery_gain": {"$avg": {
-                    "$subtract": ["$learning_path.mastery_after_assessment", "$learning_path.mastery_at_request"]
-                }}
+                "total_mastery_gain": {"$sum": {"$subtract": ["$learning_path.mastery_after_feedback", "$learning_path.mastery_at_request"]}},
+                # Get the LAST mastery_after_feedback for each topic per user, then average those
+                # This requires a more complex pipeline, maybe simplify for now
+                # "avg_final_mastery": {"$avg": "$learning_path.mastery_after_feedback"} # This averages over all interactions, not final mastery
+            }},
+            {"$addFields": {
+                "learning_velocity": {"$divide": ["$total_mastery_gain", "$attempts"]}
             }},
             {"$sort": {"attempts": -1}}
-        ]).to_list(length=100)
+        ]).to_list(length=500)  # Increase limit if many topics
 
         topics_data = {item["_id"]: {
             "attempts": item["attempts"],
-            "avg_mastery": item.get("avg_mastery"),
-            "avg_mastery_gain": item.get("avg_mastery_gain"),
-            "difficulty_estimate": 1.0 - (item.get("avg_mastery_gain") or 0)
+            "learning_velocity": item.get("learning_velocity"),
+            # Add avg_mastery if calculated differently later
         } for item in topic_pipeline}
 
-        # Calculate topic clusters based on relationships in knowledge graph
+        # Get topic clusters (keep simple version for now)
         topic_clusters = []
         if neo4j_driver:
             try:
                 with neo4j_driver.session(database=NEO4J_DATABASE) as session:
                     result = session.run("""
-                    MATCH (c:Concept)-[r:RELATED_TO|PART_OF|PREREQUISITE_FOR]-(related:Concept)
-                    WITH c, collect(related) as relatedConcepts
-                    RETURN c.name as topic, [rel in relatedConcepts | rel.name] as related
-                    LIMIT 100
-                    """)
-
-                    concept_relations = [{"topic": record["topic"], "related": record["related"]}
-                                         for record in result]
-
-                    # Group into clusters
+                    MATCH (c:Concept)-[r:RELATED_TO|PART_OF]-(related:Concept) // Only use existing types
+                    WHERE c <> related
+                    WITH c, collect(DISTINCT related.name) as relatedConcepts
+                    RETURN c.name as topic, relatedConcepts
+                    LIMIT 200
+                    """)  # Limit results for performance
+                    concept_relations = [
+                        {"topic": record["topic"], "related": record["related"]} for record in result]
+                    # Basic grouping - needs refinement if complex clustering is desired
                     processed = set()
                     for relation in concept_relations:
                         if relation["topic"] in processed:
                             continue
-
-                        cluster = {relation["topic"]}
-                        cluster.update(relation["related"])
-                        processed.add(relation["topic"])
-                        processed.update(relation["related"])
-
-                        topic_clusters.append({
-                            "topics": list(cluster),
-                            "size": len(cluster)
-                        })
-
+                        cluster = {relation["topic"]} | set(
+                            relation["related"])
+                        if len(cluster) > 1:
+                            topic_clusters.append(
+                                {"topics": list(cluster), "size": len(cluster)})
+                        processed.update(cluster)
             except Exception as e:
                 logger.error(
-                    f"Error getting knowledge graph clusters: {e}", exc_info=True)
+                    f"Error getting knowledge graph clusters for topic metrics: {e}", exc_info=True)
 
         return {
-            "topics": topics_data,
-            "clusters": topic_clusters,
-            "total_topics": len(topics_data),
+            "topic_metrics": topics_data,
+            "clusters": topic_clusters[:50],  # Limit cluster results
+            "total_topics_with_data": len(topics_data),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
         logger.error(f"Error getting topic metrics: {e}", exc_info=True)
-        return {
-            "error": str(e),
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
+        return {"error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @app.get("/healthcheck")

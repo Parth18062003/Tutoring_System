@@ -43,7 +43,7 @@ class OpenRouterClient:
         self,
         prompt: str,
         # Default to a popular OpenRouter model
-        model: str = "deepseek/deepseek-v3-base:free",
+        model: str = "google/gemini-2.0-flash-exp:free",
         temperature: float = 0.7,
         max_tokens: Optional[int] = 4000,
         system_prompt: Optional[str] = None
@@ -70,6 +70,7 @@ class OpenRouterClient:
                 "temperature": temperature,
                 "max_tokens": max_tokens,
                 "stream": True,
+                "response_format": {"type": "json_object"}
             }
 
             logger.info(f"Streaming from OpenRouter model '{model}'")

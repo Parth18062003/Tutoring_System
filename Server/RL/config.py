@@ -37,7 +37,7 @@ class LLMConfig(BaseModel):
 
     open_router_api_key: Optional[str] = Field(
         None, description="OpenRouter API key")
-    open_router_model: str = Field("deepseek/deepseek-v3-base:free",
+    open_router_model: str = Field("google/gemini-2.0-flash-exp:free",
                                    description="OpenRouter model to use")
 
     default_temperature: float = Field(0.7, ge=0.0, le=1.0)
@@ -128,7 +128,7 @@ def load_config() -> AppConfig:
                 "TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"),
             open_router_api_key=os.getenv("OPEN_ROUTER_API_KEY"),
             open_router_model=os.getenv(
-                "OPEN_ROUTER_MODEL", "deepseek/deepseek-v3-base:free"),
+                "OPEN_ROUTER_MODEL", "google/gemini-2.0-flash-exp:free"),
             ollama_host=os.getenv("OLLAMA_HOST"),
             ollama_model=os.getenv("OLLAMA_MODEL", "mistral:latest"),
             default_temperature=float(os.getenv("DEFAULT_TEMPERATURE", "0.7")),
