@@ -158,6 +158,8 @@
   --animate-scroll-text: scroll-text 2s linear infinite;
   --animate-float-particle: float-particle 2s infinite;
   --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+  --animate-typing-pulse: typing-pulse 1s ease-out infinite;
+  --animate-shine: shine 5s linear infinite;
 
 
   @keyframes accordion-down {
@@ -239,6 +241,25 @@
       opacity: 0;
     }
   }
+
+  @keyframes typing-pulse {
+    0%, 80%, 100% { 
+      transform: scale(0.6);
+    }
+    40% { 
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes shine {
+    0% {
+      background-position: 100%;
+    }
+    100% {
+      background-position: -100%;
+    }
+  }  
 }
 
 @layer base {

@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+  CardDescription,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +23,11 @@ import { toast } from "sonner";
 import { useLearningContent } from "@/hooks/use-learning-content";
 import { useFeedback } from "@/hooks/use-feedback";
 import { SlideIn } from "./animations";
-
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   ArrowLeft,
   PanelRight,
@@ -34,9 +46,12 @@ import {
   Eye,
   EyeOff,
   Briefcase,
-  ListTree
+  ListTree,
+ Bookmark,
+ CheckIcon,
+ BookmarkIcon
 } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
+import { saveContent } from "@/lib/saved-content";
 
 // Define interfaces
 interface InteractiveScenarioProps {
@@ -90,7 +105,9 @@ export function InteractiveScenario({
   // UI state
   const [activeTab, setActiveTab] = useState<string>("scenario");
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [showReflectionAnswers, setShowReflectionAnswers] = useState<boolean[]>([]);
+  const [showReflectionAnswers, setShowReflectionAnswers] = useState<boolean[]>(
+    []
+  );
   const [reflectionResponses, setReflectionResponses] = useState<string[]>([]);
   const [expandedConcepts, setExpandedConcepts] = useState<boolean>(false);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -98,10 +115,14 @@ export function InteractiveScenario({
   const [showFeedback, setShowFeedback] = useState(false);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
-  const [userHasSubmittedFeedback, setUserHasSubmittedFeedback] = useState(false);
-  const [visibleSections, setVisibleSections] = useState<Record<string, boolean>>({});
+  const [userHasSubmittedFeedback, setUserHasSubmittedFeedback] =
+    useState(false);
+  const [visibleSections, setVisibleSections] = useState<
+    Record<string, boolean>
+  >({});
   const [activeSection, setActiveSection] = useState<string>("");
-
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   // Time tracking variables
   const [startTime] = useState<number>(Date.now());
   const [pageFocus, setPageFocus] = useState<boolean>(true);
@@ -109,30 +130,34 @@ export function InteractiveScenario({
   const lastActiveRef = useRef<number>(Date.now());
 
   // Extract reflection questions from content
-  const reflectionQuestions = currentContent?.sections?.find(
-    (section: any) => section.sectionType === "reflection_questions"
-  )?.questions || [];
+  const reflectionQuestions =
+    currentContent?.sections?.find(
+      (section: any) => section.sectionType === "reflection_questions"
+    )?.questions || [];
 
-  const reflectionConcepts = currentContent?.sections?.find(
-    (section: any) => section.sectionType === "reflection_questions"
-  )?.concepts || [];
+  const reflectionConcepts =
+    currentContent?.sections?.find(
+      (section: any) => section.sectionType === "reflection_questions"
+    )?.concepts || [];
 
   // Initialize reflection state when questions are loaded
   useEffect(() => {
     if (reflectionQuestions.length > 0) {
-      setShowReflectionAnswers(new Array(reflectionQuestions.length).fill(false));
+      setShowReflectionAnswers(
+        new Array(reflectionQuestions.length).fill(false)
+      );
       setReflectionResponses(new Array(reflectionQuestions.length).fill(""));
     }
   }, [reflectionQuestions.length]);
 
   // Group sections by type
-  const groupedSections = currentContent?.sections?.reduce<Record<string, any[]>>(
-    (acc, section) => {
+  const groupedSections =
+    currentContent?.sections?.reduce<Record<string, any[]>>((acc, section) => {
       // Find the matching section from our defined list
-      const matchedSection = SCENARIO_SECTIONS.find(s => 
-        section.sectionType === s.type
+      const matchedSection = SCENARIO_SECTIONS.find(
+        (s) => section.sectionType === s.type
       );
-      
+
       if (matchedSection) {
         const key = matchedSection.type;
         if (!acc[key]) acc[key] = [];
@@ -142,11 +167,9 @@ export function InteractiveScenario({
         if (!acc["other"]) acc["other"] = [];
         acc["other"].push(section);
       }
-      
+
       return acc;
-    },
-    {}
-  ) || {};
+    }, {}) || {};
 
   // Handle section visibility for progress tracking
   const handleSectionVisibility = useCallback(
@@ -156,7 +179,7 @@ export function InteractiveScenario({
           const updated = { ...prev, [sectionId]: true };
           return updated;
         });
-        
+
         setActiveSection(sectionId);
       }
     },
@@ -169,15 +192,17 @@ export function InteractiveScenario({
 
     const visibleCount = Object.keys(visibleSections).length;
     const totalSections = currentContent.sections.length || 1;
-    
+
     // Additional progress from responding to reflection questions
-    const answerProgress = reflectionResponses.filter(response => response.length > 0).length / 
-                          (reflectionQuestions.length || 1);
-    
+    const answerProgress =
+      reflectionResponses.filter((response) => response.length > 0).length /
+      (reflectionQuestions.length || 1);
+
     // Weight: 70% for sections viewed, 30% for reflection questions answered
-    const sectionsProgress = Math.min(100, (visibleCount / totalSections) * 100) * 0.7;
+    const sectionsProgress =
+      Math.min(100, (visibleCount / totalSections) * 100) * 0.7;
     const reflectionsProgress = answerProgress * 30;
-    
+
     const newProgress = Math.min(100, sectionsProgress + reflectionsProgress);
     setReadingProgress(newProgress);
     updateCompletionPercentage(newProgress);
@@ -186,12 +211,12 @@ export function InteractiveScenario({
       setShowFeedback(true);
     }
   }, [
-    visibleSections, 
-    currentContent?.sections, 
-    reflectionResponses, 
+    visibleSections,
+    currentContent?.sections,
+    reflectionResponses,
     reflectionQuestions.length,
-    completeResponse, 
-    updateCompletionPercentage
+    completeResponse,
+    updateCompletionPercentage,
   ]);
 
   // Initial content loading
@@ -208,7 +233,14 @@ export function InteractiveScenario({
       }
       setHasInitiallyLoaded(true);
     }
-  }, [fetchContent, contentType, subjectId, topic, hasInitiallyLoaded, initialContent]);
+  }, [
+    fetchContent,
+    contentType,
+    subjectId,
+    topic,
+    hasInitiallyLoaded,
+    initialContent,
+  ]);
 
   // Time tracking
   useEffect(() => {
@@ -224,7 +256,9 @@ export function InteractiveScenario({
           setActiveTime((prev) => prev + 1);
         }, 1000);
       } else {
-        setActiveTime((prev) => prev + (Date.now() - lastActiveRef.current) / 1000);
+        setActiveTime(
+          (prev) => prev + (Date.now() - lastActiveRef.current) / 1000
+        );
         clearInterval(activeTimeInterval);
       }
     };
@@ -249,6 +283,36 @@ export function InteractiveScenario({
     };
   }, [pageFocus]);
 
+  const handleSaveContent = async () => {
+    if (isSaved || isSaving || !currentContent) return;
+  
+    setIsSaving(true);
+  
+    try {
+      const contentToSave = {
+        interaction_id: metadata?.interaction_id,
+        contentType,
+        subject: subjectId,
+        topic,
+        title: `${topic} Interactive Scenario`,
+        sections: currentContent.sections,
+        instructionalPlan: currentContent.instructionalPlan,
+        metadata: metadata,
+      };
+  
+      await saveContent(contentToSave);
+      setIsSaved(true);
+  
+      toast.success(
+        "Scenario Saved. You can access it in your saved library"
+      );
+    } catch (error) {
+      console.error("Error saving scenario:", error);
+      toast.error("Save Failed. Could not save scenario. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
   // Feedback submission
   const handleFeedback = useCallback(
     async (rating: number, markAsCompleted: boolean = false) => {
@@ -258,7 +322,7 @@ export function InteractiveScenario({
 
       try {
         setUserHasSubmittedFeedback(true);
-        
+
         const finalProgress = markAsCompleted ? 100 : readingProgress;
 
         if (markAsCompleted) {
@@ -281,7 +345,15 @@ export function InteractiveScenario({
         toast.error("Failed to submit feedback. Please try again.");
       }
     },
-    [metadata?.interaction_id, activeTime, readingProgress, success, submitting, submitFeedback, updateCompletionPercentage]
+    [
+      metadata?.interaction_id,
+      activeTime,
+      readingProgress,
+      success,
+      submitting,
+      submitFeedback,
+      updateCompletionPercentage,
+    ]
   );
 
   // Auto-submit feedback on unmount if needed
@@ -321,10 +393,10 @@ export function InteractiveScenario({
     const newResponses = [...reflectionResponses];
     newResponses[index] = value;
     setReflectionResponses(newResponses);
-    
+
     // Mark as completed step if there's substantial input
     if (value.length > 10) {
-      setCompletedSteps(prev => new Set([...prev, index]));
+      setCompletedSteps((prev) => new Set([...prev, index]));
     }
   };
 
@@ -346,12 +418,12 @@ export function InteractiveScenario({
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   // Get icon for section
   const getSectionIcon = (type: string) => {
-    const sectionDef = SCENARIO_SECTIONS.find(s => s.type === type);
+    const sectionDef = SCENARIO_SECTIONS.find((s) => s.type === type);
     if (sectionDef) {
       const IconComponent = sectionDef.icon;
       return <IconComponent className="h-4 w-4" />;
@@ -401,14 +473,17 @@ export function InteractiveScenario({
               {SCENARIO_SECTIONS.map((section, index) => {
                 const hasContent = groupedSections[section.type]?.length > 0;
                 if (!hasContent && !loading) return null;
-                
+
                 const isCompleted = completedSteps.has(index);
-                const isActive = activeSection === section.type || currentStep === index;
-                
+                const isActive =
+                  activeSection === section.type || currentStep === index;
+
                 return (
                   <Button
                     key={section.type}
-                    variant={isActive ? "default" : isCompleted ? "ghost" : "outline"}
+                    variant={
+                      isActive ? "default" : isCompleted ? "ghost" : "outline"
+                    }
                     size="sm"
                     className={cn(
                       "w-full justify-start text-left text-xs",
@@ -416,9 +491,11 @@ export function InteractiveScenario({
                     )}
                     onClick={() => {
                       setCurrentStep(index);
-                      
+
                       // Find the corresponding section element and scroll to it
-                      const sectionElement = document.getElementById(section.type);
+                      const sectionElement = document.getElementById(
+                        section.type
+                      );
                       if (sectionElement) {
                         sectionElement.scrollIntoView({ behavior: "smooth" });
                       }
@@ -460,9 +537,14 @@ export function InteractiveScenario({
       </div>
 
       {/* Main content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 justify-between min-w-0">
         {/* View options */}
-        <Tabs value={activeTab} onValueChange={setActiveTab as any} className="w-full mb-4">
+        <div className="flex justify-between">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab as any}
+          className="w-full mb-4"
+        >
           <div className="flex items-center justify-between">
             <TabsList>
               <TabsTrigger value="scenario">
@@ -480,7 +562,21 @@ export function InteractiveScenario({
             </TabsList>
           </div>
         </Tabs>
-
+        <Button
+                variant="outline"
+                size="icon"
+                onClick={handleSaveContent}
+                disabled={isSaving || !completeResponse}
+                title="Save for later"
+                className="h-8 w-8"
+              >
+                {isSaved ? (
+                  <CheckIcon className="h-4 w-4 text-green-500" />
+                ) : (
+                  <BookmarkIcon className="h-4 w-4" />
+                )}
+              </Button>
+        </div>
         {/* Loading state */}
         {loading && (
           <Card>
@@ -527,302 +623,382 @@ export function InteractiveScenario({
         )}
 
         {/* Interactive Scenario View (Step-by-Step) */}
-        <Tabs>
         {!loading && !error && currentContent && (
-          <TabsContent value="scenario" className="mt-0">
-            {/* Display current step */}
-            {SCENARIO_SECTIONS.map((sectionDef, index) => {
-              // Only render the current step
-              if (index !== currentStep) return null;
-              
-              const sections = groupedSections[sectionDef.type] || [];
-              if (sections.length === 0) return null;
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value)}
+          >
+            <TabsContent value="scenario" className="mt-0">
+              {/* Display current step */}
+              {SCENARIO_SECTIONS.map((sectionDef, index) => {
+                // Only render the current step
+                if (index !== currentStep) return null;
 
-              return (
-                <div key={sectionDef.type} id={sectionDef.type} className="space-y-6">
-                  <Card className="border shadow-sm">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2">
-                          <span className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center text-sm font-medium">
-                            {index + 1}
-                          </span>
-                          <span>{sectionDef.title}</span>
-                        </CardTitle>
-                        <Badge variant="outline">
-                          Step {index + 1} of {SCENARIO_SECTIONS.length}
-                        </Badge>
-                      </div>
-                      <CardDescription>
-                        {index === 0 && "Begin your interactive scenario journey"}
-                        {index === 1 && "Understand the background and context"}
-                        {index === 2 && "Identify the key challenges"}
-                        {index === 3 && "Explore potential solutions"}
-                        {index === 4 && "Reflect on your learning"}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {sections.map((section, sectionIndex) => (
-                        <div 
-                          key={`${sectionDef.type}-${sectionIndex}`} 
-                          className={cn(
-                            sectionDef.type === "reflection_questions" && "space-y-8"
-                          )}
-                        >
-                          <Markdown
-                            onVisibilityChange={(isVisible, sectionId) => {
-                              if (sectionId) {
-                                handleSectionVisibility(isVisible, sectionDef.type);
-                              }
-                            }}
-                          >
-                            {section.contentMarkdown}
-                          </Markdown>
-                          
-                          {/* Special handling for reflection questions */}
-                          {sectionDef.type === "reflection_questions" && reflectionQuestions.length > 0 && (
-                            <div className="space-y-8 mt-6">
-                              {reflectionQuestions.map((question: string, qIndex: number) => (
-                                <Card key={`question-${qIndex}`} className="border bg-muted/20">
-                                  <CardHeader className="pb-2">
-                                    <CardTitle className="text-base font-medium">
-                                      Question {qIndex + 1}:
-                                    </CardTitle>
-                                    <CardDescription className="text-base font-normal text-foreground">
-                                      {question}
-                                    </CardDescription>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <Textarea 
-                                      placeholder="Type your response here..."
-                                      className="min-h-[100px] mb-2"
-                                      value={reflectionResponses[qIndex] || ''}
-                                      onChange={(e) => handleReflectionChange(qIndex, e.target.value)}
-                                    />
-                                    <div className="flex justify-end">
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => toggleAnswerVisibility(qIndex)}
-                                        className="flex items-center gap-1"
-                                      >
-                                        {showReflectionAnswers[qIndex] ? (
-                                          <>
-                                            <EyeOff className="h-3 w-3" />
-                                            <span>Hide Hints</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Eye className="h-3 w-3" />
-                                            <span>Show Hints</span>
-                                          </>
-                                        )}
-                                      </Button>
-                                    </div>
-                                    
-                                    {showReflectionAnswers[qIndex] && (
-                                      <div className="mt-4 p-3 bg-muted rounded-md text-sm">
-                                        <p className="font-medium mb-2">Thinking Points:</p>
-                                        <ul className="list-disc list-inside space-y-1">
-                                          {reflectionConcepts.slice(0, 3).map((concept: string, cIndex: number) => (
-                                            <li key={`hint-${qIndex}-${cIndex}`}>{concept}</li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {/* Key concepts for reflection section */}
-                          {sectionDef.type === "reflection_questions" && reflectionConcepts.length > 0 && (
-                            <Collapsible className="mt-8">
-                              <Card>
-                                <CardHeader className="pb-2">
-                                  <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" className="w-full flex justify-between p-0 h-auto">
-                                      <CardTitle className="text-base font-medium flex items-center gap-2">
-                                        <ListTree className="h-4 w-4" />
-                                        Key Concepts Applied
-                                      </CardTitle>
-                                      <ChevronDown className="h-4 w-4" />
-                                    </Button>
-                                  </CollapsibleTrigger>
-                                </CardHeader>
-                                <CollapsibleContent>
-                                  <CardContent>
-                                    <ul className="space-y-2">
-                                      {reflectionConcepts.map((concept: string, index: number) => (
-                                        <li key={`concept-${index}`} className="flex items-start gap-2">
-                                          <LightbulbIcon className="h-4 w-4 text-yellow-500 mt-1 shrink-0" />
-                                          <span>{concept}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </CardContent>
-                                </CollapsibleContent>
-                              </Card>
-                            </Collapsible>
-                          )}
-                        </div>
-                      ))}
-                    </CardContent>
-                    
-                    <CardFooter className="flex justify-between border-t p-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => goToStep(currentStep - 1)}
-                        disabled={currentStep === 0}
-                        className="flex items-center gap-1"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        <span>Previous</span>
-                      </Button>
-                      
-                      <Button
-                        variant="default"
-                        onClick={() => {
-                          // Mark current step as completed when moving forward
-                          setCompletedSteps(prev => new Set([...prev, currentStep]));
-                          goToStep(currentStep + 1);
-                        }}
-                        disabled={currentStep === SCENARIO_SECTIONS.length - 1}
-                        className="flex items-center gap-1"
-                      >
-                        <span>Continue</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </div>
-              );
-            })}
-            
-            {/* Completion card (shown when all steps are completed) */}
-            {currentStep === SCENARIO_SECTIONS.length && (
-              <Card className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-green-600" />
-                    <span>Scenario Completed!</span>
-                  </CardTitle>
-                  <CardDescription>
-                    You've successfully worked through all steps of this interactive scenario.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm">
-                    This scenario has helped you understand {topic} through practical application.
-                    You've explored the challenges, worked through solutions, and reflected on key concepts.
-                  </p>
-                  
-                  {reflectionResponses.some(r => r.trim().length > 0) && (
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Your Reflections:</h4>
-                      {reflectionResponses.map((response, index) => (
-                        response.trim().length > 0 ? (
-                          <div key={`summary-${index}`} className="text-sm border-l-2 border-primary pl-3 py-1">
-                            <p className="font-medium text-xs text-muted-foreground mb-1">
-                              Question {index + 1}:
-                            </p>
-                            <p>{response}</p>
-                          </div>
-                        ) : null
-                      ))}
-                    </div>
-                  )}
-                  
-                  <div className="pt-4">
-                    <h4 className="font-medium mb-2">Key Concepts Covered:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {reflectionConcepts.map((concept: string, index: number) => (
-                        <Badge key={`concept-badge-${index}`} variant="outline" className="bg-primary/10">
-                          {concept.split(' ').slice(0, 3).join(' ')}
-                          {concept.split(' ').length > 3 && '...'}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between border-t p-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => goToStep(SCENARIO_SECTIONS.length - 1)}
-                    className="flex items-center gap-1"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    <span>Back to Reflections</span>
-                  </Button>
-                  
-                  <Button
-                    variant="default"
-                    onClick={onBack}
-                    className="flex items-center gap-1"
-                  >
-                    <span>Exit Scenario</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            )}
-          </TabsContent>
-        )}
-
-        {/* Full View Tab */}
-        {!loading && !error && currentContent && (
-          <TabsContent value="all" className="mt-0">
-            <div className="space-y-8">
-              {SCENARIO_SECTIONS.map((sectionDef) => {
                 const sections = groupedSections[sectionDef.type] || [];
                 if (sections.length === 0) return null;
 
                 return (
-                  <div key={sectionDef.type} id={`all-${sectionDef.type}`}>
-                    <Card>
+                  <div
+                    key={sectionDef.type}
+                    id={sectionDef.type}
+                    className="space-y-6"
+                  >
+                    <Card className="border shadow-sm">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          {getSectionIcon(sectionDef.type)}
-                          <span>{sectionDef.title}</span>
-                        </CardTitle>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="flex items-center gap-2">
+                            <span className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center text-sm font-medium">
+                              {index + 1}
+                            </span>
+                            <span>{sectionDef.title}</span>
+                          </CardTitle>
+                          <Badge variant="outline">
+                            Step {index + 1} of {SCENARIO_SECTIONS.length}
+                          </Badge>
+                        </div>
+                        <CardDescription>
+                          {index === 0 &&
+                            "Begin your interactive scenario journey"}
+                          {index === 1 &&
+                            "Understand the background and context"}
+                          {index === 2 && "Identify the key challenges"}
+                          {index === 3 && "Explore potential solutions"}
+                          {index === 4 && "Reflect on your learning"}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
                         {sections.map((section, sectionIndex) => (
-                          <div key={`all-${sectionDef.type}-${sectionIndex}`}>
-                            <Markdown>{section.contentMarkdown}</Markdown>
-                            
-                            {/* Special handling for reflection questions in full view */}
-                            {sectionDef.type === "reflection_questions" && reflectionQuestions.length > 0 && (
-                              <div className="space-y-4 mt-6">
-                                <h4 className="font-medium">Reflection Questions:</h4>
-                                <ol className="list-decimal list-inside space-y-2">
-                                  {reflectionQuestions.map((question: string, qIndex: number) => (
-                                    <li key={`all-question-${qIndex}`}>{question}</li>
-                                  ))}
-                                </ol>
-                                
-                                <Separator className="my-4" />
-                                
-                                <h4 className="font-medium">Key Concepts:</h4>
-                                <ul className="list-disc list-inside space-y-1">
-                                  {reflectionConcepts.map((concept: string, index: number) => (
-                                    <li key={`all-concept-${index}`}>{concept}</li>
-                                  ))}
-                                </ul>
-                              </div>
+                          <div
+                            key={`${sectionDef.type}-${sectionIndex}`}
+                            className={cn(
+                              sectionDef.type === "reflection_questions" &&
+                                "space-y-8"
                             )}
+                          >
+                            <Markdown
+                              onVisibilityChange={(isVisible, sectionId) => {
+                                if (sectionId) {
+                                  handleSectionVisibility(
+                                    isVisible,
+                                    sectionDef.type
+                                  );
+                                }
+                              }}
+                            >
+                              {section.contentMarkdown}
+                            </Markdown>
+
+                            {/* Special handling for reflection questions */}
+                            {sectionDef.type === "reflection_questions" &&
+                              reflectionQuestions.length > 0 && (
+                                <div className="space-y-8 mt-6">
+                                  {reflectionQuestions.map(
+                                    (question: string, qIndex: number) => (
+                                      <Card
+                                        key={`question-${qIndex}`}
+                                        className="border bg-muted/20"
+                                      >
+                                        <CardHeader className="pb-2">
+                                          <CardTitle className="text-base font-medium">
+                                            Question {qIndex + 1}:
+                                          </CardTitle>
+                                          <CardDescription className="text-base font-normal text-foreground">
+                                            {question}
+                                          </CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                          <Textarea
+                                            placeholder="Type your response here..."
+                                            className="min-h-[100px] mb-2"
+                                            value={
+                                              reflectionResponses[qIndex] || ""
+                                            }
+                                            onChange={(e) =>
+                                              handleReflectionChange(
+                                                qIndex,
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                          <div className="flex justify-end">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() =>
+                                                toggleAnswerVisibility(qIndex)
+                                              }
+                                              className="flex items-center gap-1"
+                                            >
+                                              {showReflectionAnswers[qIndex] ? (
+                                                <>
+                                                  <EyeOff className="h-3 w-3" />
+                                                  <span>Hide Hints</span>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <Eye className="h-3 w-3" />
+                                                  <span>Show Hints</span>
+                                                </>
+                                              )}
+                                            </Button>
+                                          </div>
+
+                                          {showReflectionAnswers[qIndex] && (
+                                            <div className="mt-4 p-3 bg-muted rounded-md text-sm">
+                                              <p className="font-medium mb-2">
+                                                Thinking Points:
+                                              </p>
+                                              <ul className="list-disc list-inside space-y-1">
+                                                {reflectionConcepts
+                                                  .slice(0, 3)
+                                                  .map(
+                                                    (
+                                                      concept: string,
+                                                      cIndex: number
+                                                    ) => (
+                                                      <li
+                                                        key={`hint-${qIndex}-${cIndex}`}
+                                                      >
+                                                        {concept}
+                                                      </li>
+                                                    )
+                                                  )}
+                                              </ul>
+                                            </div>
+                                          )}
+                                        </CardContent>
+                                      </Card>
+                                    )
+                                  )}
+                                </div>
+                              )}
+
+                            {/* Key concepts for reflection section */}
+                            {sectionDef.type === "reflection_questions" &&
+                              reflectionConcepts.length > 0 && (
+                                <Collapsible className="mt-8">
+                                  <Card>
+                                    <CardHeader className="pb-2">
+                                      <CollapsibleTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          className="w-full flex justify-between p-0 h-auto"
+                                        >
+                                          <CardTitle className="text-base font-medium flex items-center gap-2">
+                                            <ListTree className="h-4 w-4" />
+                                            Key Concepts Applied
+                                          </CardTitle>
+                                          <ChevronDown className="h-4 w-4" />
+                                        </Button>
+                                      </CollapsibleTrigger>
+                                    </CardHeader>
+                                    <CollapsibleContent>
+                                      <CardContent>
+                                        <ul className="space-y-2">
+                                          {reflectionConcepts.map(
+                                            (
+                                              concept: string,
+                                              index: number
+                                            ) => (
+                                              <li
+                                                key={`concept-${index}`}
+                                                className="flex items-start gap-2"
+                                              >
+                                                <LightbulbIcon className="h-4 w-4 text-yellow-500 mt-1 shrink-0" />
+                                                <span>{concept}</span>
+                                              </li>
+                                            )
+                                          )}
+                                        </ul>
+                                      </CardContent>
+                                    </CollapsibleContent>
+                                  </Card>
+                                </Collapsible>
+                              )}
                           </div>
                         ))}
                       </CardContent>
+
+                      <CardFooter className="flex justify-between border-t p-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => goToStep(currentStep - 1)}
+                          disabled={currentStep === 0}
+                          className="flex items-center gap-1"
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                          <span>Previous</span>
+                        </Button>
+
+                        <Button
+                          variant="default"
+                          onClick={() => {
+                            // Mark current step as completed when moving forward
+                            setCompletedSteps(
+                              (prev) => new Set([...prev, currentStep])
+                            );
+                            goToStep(currentStep + 1);
+                          }}
+                          disabled={
+                            currentStep === SCENARIO_SECTIONS.length - 1
+                          }
+                          className="flex items-center gap-1"
+                        >
+                          <span>Continue</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </CardFooter>
                     </Card>
                   </div>
                 );
               })}
-            </div>
-          </TabsContent>
+
+              {/* Completion card (shown when all steps are completed) */}
+              {currentStep === SCENARIO_SECTIONS.length && (
+                <Card className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Check className="h-5 w-5 text-green-600" />
+                      <span>Scenario Completed!</span>
+                    </CardTitle>
+                    <CardDescription>
+                      You've successfully worked through all steps of this
+                      interactive scenario.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm">
+                      This scenario has helped you understand {topic} through
+                      practical application. You've explored the challenges,
+                      worked through solutions, and reflected on key concepts.
+                    </p>
+
+                    {reflectionResponses.some((r) => r.trim().length > 0) && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Your Reflections:</h4>
+                        {reflectionResponses.map((response, index) =>
+                          response.trim().length > 0 ? (
+                            <div
+                              key={`summary-${index}`}
+                              className="text-sm border-l-2 border-primary pl-3 py-1"
+                            >
+                              <p className="font-medium text-xs text-muted-foreground mb-1">
+                                Question {index + 1}:
+                              </p>
+                              <p>{response}</p>
+                            </div>
+                          ) : null
+                        )}
+                      </div>
+                    )}
+
+                    <div className="pt-4">
+                      <h4 className="font-medium mb-2">
+                        Key Concepts Covered:
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {reflectionConcepts.map(
+                          (concept: string, index: number) => (
+                            <Badge
+                              key={`concept-badge-${index}`}
+                              variant="outline"
+                              className="bg-primary/10"
+                            >
+                              {concept.split(" ").slice(0, 3).join(" ")}
+                              {concept.split(" ").length > 3 && "..."}
+                            </Badge>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-between border-t p-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => goToStep(SCENARIO_SECTIONS.length - 1)}
+                      className="flex items-center gap-1"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      <span>Back to Reflections</span>
+                    </Button>
+
+                    <Button
+                      variant="default"
+                      onClick={onBack}
+                      className="flex items-center gap-1"
+                    >
+                      <span>Exit Scenario</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
+            </TabsContent>
+            <TabsContent value="all" className="mt-0">
+              <div className="space-y-8">
+                {SCENARIO_SECTIONS.map((sectionDef) => {
+                  const sections = groupedSections[sectionDef.type] || [];
+                  if (sections.length === 0) return null;
+
+                  return (
+                    <div key={sectionDef.type} id={`all-${sectionDef.type}`}>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            {getSectionIcon(sectionDef.type)}
+                            <span>{sectionDef.title}</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {sections.map((section, sectionIndex) => (
+                            <div key={`all-${sectionDef.type}-${sectionIndex}`}>
+                              <Markdown>{section.contentMarkdown}</Markdown>
+
+                              {/* Special handling for reflection questions in full view */}
+                              {sectionDef.type === "reflection_questions" &&
+                                reflectionQuestions.length > 0 && (
+                                  <div className="space-y-4 mt-6">
+                                    <h4 className="font-medium">
+                                      Reflection Questions:
+                                    </h4>
+                                    <ol className="list-decimal list-inside space-y-2">
+                                      {reflectionQuestions.map(
+                                        (question: string, qIndex: number) => (
+                                          <li key={`all-question-${qIndex}`}>
+                                            {question}
+                                          </li>
+                                        )
+                                      )}
+                                    </ol>
+
+                                    <Separator className="my-4" />
+
+                                    <h4 className="font-medium">
+                                      Key Concepts:
+                                    </h4>
+                                    <ul className="list-disc list-inside space-y-1">
+                                      {reflectionConcepts.map(
+                                        (concept: string, index: number) => (
+                                          <li key={`all-concept-${index}`}>
+                                            {concept}
+                                          </li>
+                                        )
+                                      )}
+                                    </ul>
+                                  </div>
+                                )}
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
-</Tabs>
+
         {/* Feedback UI */}
         {(completeResponse || readingProgress > 50) && !loading && (
           <SlideIn direction="bottom">
@@ -835,7 +1011,10 @@ export function InteractiveScenario({
                       <span className="text-xs text-muted-foreground">
                         {Math.round(readingProgress)}%
                       </span>
-                      <Progress value={readingProgress} className="w-12 h-1.5" />
+                      <Progress
+                        value={readingProgress}
+                        className="w-12 h-1.5"
+                      />
                     </div>
                   </div>
 

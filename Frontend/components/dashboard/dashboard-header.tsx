@@ -16,11 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 interface DashboardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-  heading: string;
+  heading?: string;
   text?: string;
-  userName: string;
+  userName?: string;
   userImage?: string;
-  lastLogin: string;
+  lastLogin?: string;
 }
 
 export function DashboardHeader({
@@ -32,7 +32,7 @@ export function DashboardHeader({
   className,
   ...props
 }: DashboardHeaderProps) {
-  const initials = userName.split(' ').map(n => n[0]).join('');
+  const initials = userName?.split(' ').map(n => n[0]).join('');
   
   return (
     <div className={cn("flex flex-col gap-1", className)} {...props}>

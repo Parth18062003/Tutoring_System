@@ -11,6 +11,7 @@ import { SavedContentViewer } from '@/components/learning/saved-content-viewer';
 import { SavedFlashcardViewer } from '@/components/learning/saved-flashcard-viewer';
 import ReturnButtons from '@/components/return-buttons';
 import { SavedCheatsheetViewer } from '@/components/learning/saved-cheatsheet-viewer';
+import { SavedScenarioViewer } from '@/components/learning/saved-scenario-viewer';
 
 export default function SavedContentDetailPage() {
   const params = useParams();
@@ -85,6 +86,9 @@ export default function SavedContentDetailPage() {
       return <SavedCheatsheetViewer content={content} />;
     }
 
+    if (content.contentType === "interactive-scenario") {
+      return <SavedScenarioViewer content={content} />;
+    }
     // Check if content has flashcard sections
     const hasFlashcardSections = content.sections?.some(
       (section: any) => section.sectionType === "flashcard"
@@ -96,6 +100,10 @@ export default function SavedContentDetailPage() {
         section.sectionType === "formulas_rules"
     );
 
+    const hasScenarioSections = content.sections?.some(
+      (section: any) => section.sectionType === "interactive-scenario"
+    );
+
     if (hasFlashcardSections) {
       return <SavedFlashcardViewer content={content} />;
     }
@@ -104,6 +112,9 @@ export default function SavedContentDetailPage() {
       return <SavedCheatsheetViewer content={content} />;
     }
     
+    if (hasScenarioSections) {
+      return <SavedScenarioViewer content={content} />;
+    }
     // Default to regular content viewer for lessons, practice, etc.
     return <SavedContentViewer content={content} />;
   };

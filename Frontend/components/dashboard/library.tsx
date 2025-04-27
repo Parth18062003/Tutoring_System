@@ -211,6 +211,7 @@ export default function Library() {
               <TabsTrigger value="lesson">Lessons</TabsTrigger>
               <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
               <TabsTrigger value="cheatsheet">Cheatsheets</TabsTrigger>
+              <TabsTrigger value="scenario">Scenario</TabsTrigger>
             </TabsList>
           </Tabs>
 

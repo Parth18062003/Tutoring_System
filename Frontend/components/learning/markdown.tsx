@@ -186,6 +186,9 @@ export function Markdown({ children, className, onVisibilityChange }: MarkdownPr
           td: ({ node, ...props }) => (
             <td className="border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />
           ),
+          a: ({ node, ...props }) => (
+            <a className="text-primary bg-secondary h-4 rounded-full hover:underline text-sm p-1" target='_blank' {...props} />
+          ),
         }}
       >
         {children}
