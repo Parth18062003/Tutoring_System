@@ -6,17 +6,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  LayoutDashboard,
+  ChartColumnIncreasing,
   User,
   Settings,
   LogOut,
   BrainCircuit,
-  Shield,
-  CreditCard,
-  Key,
-  Bell,
   Palette,
   ScrollText,
+  BookMarked,
+  History,
+  BookOpen,
+  MessageSquare,
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,52 +42,38 @@ import {
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
 import { authClient } from "@/lib/auth-client";
+import { title } from "process";
 
 const navItems = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
   {
     title: "Profile",
     href: "/dashboard/profile",
     icon: User,
   },
   {
-    title: "Security",
-    href: "/dashboard/security",
-    icon: Shield,
+    title: "Start Learning",
+    href: "/learning",
+    icon: BookOpen
   },
   {
-    title: "Billing",
-    href: "/dashboard/billing",
-    icon: CreditCard,
+    title: "Analytics",
+    href: "/dashboard/analytics",
+    icon: ChartColumnIncreasing,
   },
   {
-    title: "API Keys",
-    href: "/dashboard/api-keys",
-    icon: Key,
+    title: "Saved Content",
+    href: "/dashboard/library",
+    icon: BookMarked,
   },
   {
-    title: "Notifications",
-    href: "/dashboard/notifications",
-    icon: Bell,
+    title: "Assessment History",
+    href: "/learning/assessment/history",
+    icon: History,
   },
   {
-    title: "Appearance",
-    href: "/dashboard/appearance",
-    icon: Palette,
-  },
-  {
-    title: "Logs",
-    href: "/dashboard/logs",
-    icon: ScrollText,
-  },
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
+    title: "Chatbot",
+    href: "/chatbot",
+    icon: MessageSquare,
   },
 ];
 

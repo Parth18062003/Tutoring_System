@@ -31,6 +31,7 @@ import { useCallback, useEffect, useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ReturnButtons from "@/components/return-buttons";
+import { useRouter } from "next/navigation";
 
 // Define page limits for pagination
 const PATH_PAGE_LIMIT = 10;
@@ -62,6 +63,7 @@ export default function AnalyticsDashboard({
   const [assessmentLoading, setAssessmentLoading] = useState(false);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Data fetch functions using analytics-api
   const fetchSummary = useCallback(async () => {
@@ -255,17 +257,25 @@ export default function AnalyticsDashboard({
               </span>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshAll}
-            disabled={summaryLoading}
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 mr-1.5 ${summaryLoading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
+          <div className="gap-x-4">
+          <Button variant="ghost" onClick={() => router.push("/dashboard/profile")}>
+              Profile
+            </Button>
+            <Button variant="ghost" onClick={() => router.push("/learning")}>
+              Start Learning
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshAll}
+              disabled={summaryLoading}
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 mr-1.5 ${summaryLoading ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Summary Metrics Row */}

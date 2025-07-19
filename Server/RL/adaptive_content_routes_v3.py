@@ -3066,6 +3066,26 @@ async def get_next_content_stream(
         final_topic_name, mastery)
     prereq = calculate_prerequisite_satisfaction(
         final_topic_idx, student_state.mastery, unwrapped_env) if final_topic_idx != -1 else 0.5
+
+    final_difficulty_choice = difficulty_choice  # Start with the RL agent's choice
+
+    # Define mastery thresholds for override (adjust these as needed)
+    HARDER_THRESHOLD = 0.75
+    NORMAL_THRESHOLD = 0.45
+
+    if mastery > HARDER_THRESHOLD:
+        final_difficulty_choice = DifficultyLevel.HARDER
+    elif mastery > NORMAL_THRESHOLD:
+        final_difficulty_choice = DifficultyLevel.NORMAL
+    else:  # mastery <= NORMAL_THRESHOLD
+        final_difficulty_choice = DifficultyLevel.EASIER
+
+    if final_difficulty_choice != difficulty_choice:
+        logger.info(
+            f"User {user_id}: Difficulty OVERRIDDEN based on mastery ({mastery:.2f}). RL chose {difficulty_choice.name}, using {final_difficulty_choice.name}.")
+    else:
+        logger.info(
+            f"User {user_id}: Using RL difficulty choice {difficulty_choice.name} (Mastery: {mastery:.2f}).")
     base_diff = 0.5
     if unwrapped_env and hasattr(unwrapped_env, 'topic_base_difficulty') and 0 <= final_topic_idx < len(unwrapped_env.topic_base_difficulty):
         base_diff = unwrapped_env.topic_base_difficulty[final_topic_idx]
@@ -3080,7 +3100,7 @@ async def get_next_content_stream(
     eff_diff = np.clip(base_diff+diff_adj+mastery_eff, 0.05, 0.95)
 
     student_state.previous_mastery[final_topic_name] = mastery
-    diff_desc = f"{difficulty_choice.name.capitalize()} ({eff_diff:.2f})"
+    diff_desc = f"{final_difficulty_choice.name.capitalize()} ({eff_diff:.2f})"
 
     kg_context = ""
     kg_used = False
@@ -3230,7 +3250,7 @@ async def get_next_content_stream(
                 0].capitalize() if student_profile.learning_style_preferences else "Balanced",
             scaffolding_level=scaffolding_choice.name,
             scaffolding_desc=scaffolding_desc,
-            difficulty_desc=difficulty_choice.name.lower(),
+            difficulty_desc=final_difficulty_choice.name.lower(),
             feedback_instr=feedback_instr
         )
 
@@ -3246,7 +3266,7 @@ async def get_next_content_stream(
         subject=final_topic_name.split(
             '-')[0].replace('_', ' ') if '-' in final_topic_name else "General",
         strategy_name=strategy.name.replace('_', ' ').capitalize(),
-        difficulty_desc=difficulty_choice.name.lower(),
+        difficulty_desc=diff_desc,
         effective_difficulty=eff_diff,
         length_desc=length_choice.name.lower(),
         scaffolding_level=scaffolding_choice.name,
@@ -3262,7 +3282,7 @@ async def get_next_content_stream(
     subject = final_topic_name.split(
         '-')[0].replace('_', ' ') if '-' in final_topic_name else "General"
     metadata = InteractionMetadata(
-        strategy=strategy.name, topic=final_topic_name, difficulty_choice=difficulty_choice.name,
+        strategy=strategy.name, topic=final_topic_name, difficulty_choice=final_difficulty_choice.name,
         scaffolding_choice=scaffolding_choice.name, feedback_choice=feedback_choice.name,
         length_choice=length_choice.name, subject=subject, content_type=request.content_type,
         difficulty_level_desc=diff_desc, mastery_at_request=mastery,
@@ -3589,6 +3609,29 @@ async def generate_assessment(
             logger.warning(
                 f"Topic idx {effective_topic_idx} out of bounds. Using user-provided topic.")
 
+    mastery = student_state.mastery.get(final_topic_name, 0.0)
+    # Start with RL's (potentially default) choice
+    final_difficulty_choice = difficulty_choice
+
+    # Override based on mastery unless a difficulty was explicitly requested
+    if request.difficulty is None:
+        HARDER_THRESHOLD = 0.75
+        NORMAL_THRESHOLD = 0.45
+
+        if mastery > HARDER_THRESHOLD:
+            final_difficulty_choice = DifficultyLevel.HARDER
+        elif mastery > NORMAL_THRESHOLD:
+            final_difficulty_choice = DifficultyLevel.NORMAL
+        else:  # mastery <= NORMAL_THRESHOLD
+            final_difficulty_choice = DifficultyLevel.EASIER
+
+        if final_difficulty_choice != difficulty_choice:
+            logger.info(
+                f"User {user_id} (Assessment): Difficulty OVERRIDDEN based on mastery ({mastery:.2f}). RL chose {difficulty_choice.name}, using {final_difficulty_choice.name}.")
+        else:
+            logger.info(
+                f"User {user_id} (Assessment): Using RL difficulty choice {difficulty_choice.name} (Mastery: {mastery:.2f}).")
+
     if request.difficulty is None:
         mastery = student_state.mastery.get(final_topic_name, 0.3)
         base_diff = 0.5
@@ -3606,9 +3649,7 @@ async def generate_assessment(
     if final_topic_idx != -1:
         prereq = calculate_prerequisite_satisfaction(
             final_topic_idx, student_state.mastery, unwrapped_env)
-
-    mastery = student_state.mastery.get(final_topic_name, 0.0)
-    diff_desc = f"{difficulty_choice.name.capitalize()} ({difficulty:.2f})"
+    diff_desc = f"{final_difficulty_choice.name.capitalize()} ({difficulty:.2f})"
 
     subject = final_topic_name.split(
         '-')[0].replace('_', ' ') if '-' in final_topic_name else request.subject
@@ -3656,7 +3697,7 @@ async def generate_assessment(
     metadata = InteractionMetadata(
         strategy=strategy.name,
         topic=final_topic_name,
-        difficulty_choice=difficulty_choice.name,
+        difficulty_choice=final_difficulty_choice.name,
         scaffolding_choice=scaffolding_choice.name,
         feedback_choice=feedback_choice.name,
         length_choice=length_choice.name,

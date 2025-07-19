@@ -11,10 +11,12 @@ import { Progress } from '@/components/ui/progress';
 import { motion } from 'motion/react';
 import { SUBJECTS } from '@/lib/constants';
 import { getStudentAnalytics } from '@/actions/learning-actions';
+import { useRouter } from 'next/navigation';
 
 export function SubjectSelector({ onSelect }: { onSelect: (subjectId: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function loadAnalytics() {
@@ -36,6 +38,17 @@ export function SubjectSelector({ onSelect }: { onSelect: (subjectId: string) =>
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Select a Subject</h2>
+        <div className='space-x-4'>
+        <Button variant="ghost" onClick={() => router.push("/dashboard/profile")}>
+              Profile
+            </Button>
+        <Button variant="ghost" onClick={() => router.push("/chatbot")}>
+              Chat
+            </Button>
+        <Button variant="ghost" onClick={() => router.push("/dashboard/library")}>
+              Saved Content
+            </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

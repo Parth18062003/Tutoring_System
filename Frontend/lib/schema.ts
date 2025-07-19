@@ -30,12 +30,6 @@ export const personalInfoSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  displayName: z
-    .string()
-    .min(2, {
-      message: "Display name must be at least 2 characters.",
-    })
-    .optional(),
   bio: z
     .string()
     .max(500, {

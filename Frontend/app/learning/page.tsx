@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { SubjectSelector } from "@/components/learning/subject-selector";
 import { TopicSelector } from "@/components/learning/topic-selector";
 import { ContentTypeSelector } from "@/components/learning/content-type-selector";
+import ReturnButtons from "@/components/return-buttons";
 
 export default function LearningPage() {
   const router = useRouter();
@@ -43,6 +44,7 @@ export default function LearningPage() {
     <main className="min-h-screen px-4 md:px-6 lg:px-8">
       <div className="max-w-8xl mx-auto rounded-lg p-6 space-y-8">
         <div className="text-center">
+          <ReturnButtons className="absolute"/>
           <h1 className="text-2xl md:text-3xl font-semibold">
             Adaptive Learning
           </h1>

@@ -90,7 +90,7 @@ export function AssessmentHistoryTable({
                 
                 <TableCell className="text-center">
                   <Badge>
-                    {assessment.score}%
+                  {Number(assessment.score).toFixed(2)}%
                   </Badge>
                 </TableCell>
                 

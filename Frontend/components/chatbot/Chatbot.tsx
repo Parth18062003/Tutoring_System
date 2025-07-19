@@ -66,7 +66,7 @@ export default function Chatbot({
           console.error("Failed to load conversation");
         }
 
-        const data: Message[] = await res.json(); 
+        const data: Message[] = await res.json();
         console.log("Loaded messages:", data);
         if (data?.length) {
           setConversation(data);
@@ -158,7 +158,7 @@ export default function Chatbot({
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       console.log("Transcribed text:", transcript);
-      setInput(transcript); 
+      setInput(transcript);
     };
 
     recognition.start();
@@ -281,9 +281,12 @@ export default function Chatbot({
             <div className="space-y-6 mx-auto max-w-3xl">
               {messages.length === 0 && (
                 <div className="text-center p-10 rounded-2xl">
-                  <h3 className="text-xl font-medium mb-3">Ask me anything</h3>
-                  <p className="">
-                    I can help answer your questions based on available sources.
+                  <h3 className="text-xl font-medium mb-3">
+                    Hey there! Got a question? 🤔
+                  </h3>
+                  <p>
+                    I'm here to help you learn and explore. Ask me anything
+                    you're curious about — we'll figure it out together! 🚀
                   </p>
                 </div>
               )}
@@ -521,8 +524,8 @@ export default function Chatbot({
                         >
                           {isImage && previewUrls[index] ? (
                             <Image
-                            height={64}
-                            width={64}
+                              height={64}
+                              width={64}
                               src={previewUrls[index]}
                               alt={`Preview ${index}`}
                               className="w-26 h-26 object-cover rounded-md border border-zinc-200"

@@ -73,7 +73,6 @@ export function PersonalInformation({
     resolver: zodResolver(personalInfoSchema),
     defaultValues: {
       name: "",
-      displayName: "",
       bio: "",
       dob: "",
       location: "",
@@ -128,12 +127,11 @@ export function PersonalInformation({
 
         const formData: UserDataType = {
           name: session.name || "",
-          displayName: "", // You may want to add this to your UserDashboardData
           bio:
             session.bio ||
             "",
           dob: dob,
-          location: session.address || "", // Using address field for location
+          location: session.address || "", 
           phone: session.phone || "",
           school: session.school || "",
           grade: session.grade || "",
@@ -313,23 +311,7 @@ export function PersonalInformation({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="displayName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Display Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Username or nickname"
-                          {...field}
-                          disabled={!editMode}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
               </div>
 
               <FormField
@@ -406,7 +388,6 @@ export function PersonalInformation({
                                 captionLayout="dropdown"
                                 hideNavigation
                                 classNames={{
-                                  month_caption: "mx-0",
                                   ...classNames,
                                 }}
                                 components={{

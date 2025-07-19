@@ -70,6 +70,7 @@ export const auth = betterAuth({
     captcha({
       provider: "cloudflare-turnstile",
       secretKey: process.env.TURNSTILE_SECRET_KEY!,
+      endpoints: ["/authentication/sign-in", "/authentication/forgot-password", "/authentication/reset-password", "/authentication/two-factor","/authentication/sign-up"],
     }),
     twoFactor({
       skipVerificationOnEnable: true,
